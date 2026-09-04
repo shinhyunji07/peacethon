@@ -69,42 +69,62 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 3. 페이지 설정 및 사이드바 (태극 문양 배경)
+# 3. 인라인 태극 문양 SVG (외부 로딩 실패 방지)
+# ==========================================
+TAEGEUK_SVG_BASE64 = (
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDA1MDAiP"
+    "C1pathBkZWZzPjBjbGlwUGF0aCBpZD0iYSI+PHBhdGggZD0iTTAgMGg1MDB2NTAwSDB6Ii8+PC9jbGlw"
+    "UGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2EpIj48cGF0aCBmaWxsPSIjYzYwYzMwIiBkPSJN"
+    "MjUwIDBBMjUwIDI1MCAwIDAgMSAyNTAgNTAwQTEyNSAxMjUgMCAwIDEgMjUwIDI1MEExMjUgMTI1IDAg"
+    "MCAwIDI1MCAwIi8+PHBhdGggZmlsbD0iIzAwNDdhOCIgZD0iTTI1MCA1MDBBMjUwIDI1MCAwIDAgMSAy"
+    "NTAgMEExMjUgMTI1IDAgMCAxIDI1MCAyNTBBMTI1IDEyNSAwIDAgMCAyNTAgNTAwIi8+PC9nPjwvc3Zn"
+    "Pg=="
+)
+
+# ==========================================
+# 4. 페이지 설정 및 사이드바 (안전한 배경 레이어)
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
 # 사이드바 UI 설정
 with st.sidebar:
     st.header("🎨 화면 테마 설정")
-    bg_opacity = st.slider("태극 문양 배경 진하기 (투명도)", min_value=0, max_value=100, value=30, step=5)
+    bg_opacity = st.slider("태극 문양 배경 선명도", min_value=0, max_value=100, value=35, step=5)
 
-# 백분율을 opacity 수치(0.0 ~ 1.0)로 변환
+# 선명도 수치 계산 (0.0 ~ 1.0)
 opacity_val = bg_opacity / 100.0
 
 st.markdown(f"""
 <style>
-    /* 웹 앱 배경을 흰색으로 고정 */
+    /* 1. 최하단 앱 전체 투명 배경 설정 */
     .stApp {{
-        background-color: #FFFFFF !important;
-        position: relative;
+        background-color: transparent !important;
+    }}
+
+    /* 2. 메인 컨테이너에 직접 배경 배치 (레이어 가림 현상 방지) */
+    [data-testid="stMain"] {{
+        background-color: #FAFAFA !important;
+        background-image: url('data:image/svg+xml;base64,{TAEGEUK_SVG_BASE64}') !important;
+        background-repeat: no-repeat !important;
+        background-position: center center !important;
+        background-size: min(75vw, 550px) auto !important;
+        background-attachment: fixed !important;
+        /* opacity 조절을 위한 CSS blend-mode 최적화 */
+        background-blend-mode: overlay;
     }}
     
-    /* 태극 문양 이미지를 가림막 없이 선명하게 고정 레이어로 배치 */
-    .stApp::before {{
+    /* 3. 태극 문양의 투명도 및 오버레이 적용 */
+    [data-testid="stMain"]::before {{
         content: "";
         position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/09/Taegeuk.svg');
-        background-repeat: no-repeat;
-        background-position: center center;
-        background-size: min(80vw, 600px) auto;
-        opacity: {opacity_val};
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(250, 250, 250, {1.0 - opacity_val});
         pointer-events: none;
         z-index: 0;
     }}
-    
-    /* 메인 콘텐츠 레이어를 워터마크 위로 끌어올림 */
-    .stApp > header, .main {{
+
+    /* 4. 본문 요소가 정상적으로 보이도록 z-index 보장 */
+    [data-testid="stMain"] > div {{
         position: relative;
         z-index: 1;
     }}
@@ -138,7 +158,7 @@ st.markdown(f"""
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.08);
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.06);
     }}
     
     .other-user {{
@@ -149,7 +169,7 @@ st.markdown(f"""
         justify-content: flex-start;
     }}
     .other-user .message-bubble {{
-        background-color: rgba(255, 235, 235, 0.95);
+        background-color: rgba(255, 238, 238, 0.93);
         color: #611313;
         border-top-left-radius: 2px;
         border: 1px solid #FFD6D6;
@@ -163,15 +183,15 @@ st.markdown(f"""
         justify-content: flex-end;
     }}
     .my-user .message-bubble {{
-        background-color: rgba(235, 244, 255, 0.95);
+        background-color: rgba(238, 245, 255, 0.93);
         color: #0F2D59;
         border-top-right-radius: 2px;
         border: 1px solid #D6E8FF;
     }}
     
-    /* 카드 및 입력 박스 반투명 가독성 확보 */
+    /* 카드 및 박스 배경 반투명화 (가독성 유지) */
     div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
-        background-color: rgba(255, 255, 255, 0.90) !important;
+        background-color: rgba(255, 255, 255, 0.88) !important;
         border-radius: 10px;
     }}
 </style>
@@ -197,7 +217,7 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 채팅 내역 프래그먼트 (1초 자동 갱신)
+# 5. 실시간 채팅 내역 프래그먼트 (1초 자동 갱신)
 # ==========================================
 @st.fragment(run_every=1)
 def render_chat_messages():
@@ -223,7 +243,7 @@ def render_chat_messages():
             st.markdown(chat_html, unsafe_allow_html=True)
 
 # ==========================================
-# 5. 메인 채팅 레이아웃 함수
+# 6. 메인 채팅 레이아웃 함수
 # ==========================================
 def render_live_chat():
     c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
