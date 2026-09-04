@@ -8,9 +8,8 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 남북한 용어 양방향 자동 변환 사전
+# 0. 남북한 용어 양방향 자동 번역 사전
 # ==========================================
-# 1) 북한 용어 -> 남한 용어 사전
 NORTH_TO_SOUTH_DICT = {
     "곽밥": "도시락",
     "살결물": "스킨/로션",
@@ -19,28 +18,29 @@ NORTH_TO_SOUTH_DICT = {
     "얼음보숭이": "아이스크림",
     "일없습니다": "괜찮습니다",
     "일없다": "괜찮다",
-    "문화휴식터": "공원/휴양지",
+    "문화휴식터": "공원",
     "볼차기": "축구",
-    "단불": "히터/난방",
+    "단불": "난방",
     "기름밥": "볶음밥",
     "손기척": "노크",
     "밥가마": "밥솥",
     "속도전가루": "미숫가루",
-    "불고기": "너비아니/구이",
     "위생종이": "휴지"
 }
 
-# 2) 남한 용어 -> 북한 용어 사전 (대표 어휘)
 SOUTH_TO_NORTH_DICT = {
-    "도시락": "곽밥",
-    "스킨": "살결물",
-    "로션": "살결물",
+    "아이스크림": "얼음보숭이",
+    "스마트폰": "지능형 손전화",
     "휴대전화": "손전화",
     "핸드폰": "손전화",
-    "도넛": "가락지빵",
-    "아이스크림": "얼음보숭이",
+    "도시락": "곽밥",
     "괜찮습니다": "일없습니다",
     "괜찮아": "일없다",
+    "다이어트": "살찌기막기",
+    "뮤지컬": "가극",
+    "스킨": "살결물",
+    "로션": "살결물",
+    "도넛": "가락지빵",
     "공원": "문화휴식터",
     "축구": "볼차기",
     "히터": "단불",
@@ -48,35 +48,31 @@ SOUTH_TO_NORTH_DICT = {
     "볶음밥": "기름밥",
     "노크": "손기척",
     "밥솥": "밥가마",
-    "휴지": "위생종이",
-    "스마트폰": "지능형 손전화",
-    "다이어트": "살찌기막기",
-    "뮤지컬": "가극"
+    "휴지": "위생종이"
 }
 
 def auto_translate_terms(text, role):
-    """작성자 소속에 따라 상대방 언어 용어로 자동 변환(병기)합니다."""
+    """작성자 소속에 따라 상대방 언어로 용어를 직접 자동 번역합니다."""
     if not text:
         return text
     
-    translated_text = text
+    translated_text = str(text)
     
-    # 북한 청년이 작성한 경우 -> 남한 용어로 변환 표기
-    if "북한" in role:
-        for north, south in NORTH_TO_SOUTH_DICT.items():
+    if "남한" in role:
+        sorted_south_dict = sorted(SOUTH_TO_NORTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
+        for south, north in sorted_south_dict:
+            if south in translated_text:
+                translated_text = translated_text.replace(
+                    south, 
+                    f"<b>{north}</b><span style='color:#0066CC; font-size:0.85em;'>(←{south})</span>"
+                )
+    elif "북한" in role:
+        sorted_north_dict = sorted(NORTH_TO_SOUTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
+        for north, south in sorted_north_dict:
             if north in translated_text:
                 translated_text = translated_text.replace(
                     north, 
                     f"<b>{south}</b><span style='color:#888; font-size:0.85em;'>(←{north})</span>"
-                )
-    
-    # 남한 청년이 작성한 경우 -> 북한 용어로 변환 표기
-    elif "남한" in role:
-        for south, north in SOUTH_TO_NORTH_DICT.items():
-            if south in translated_text:
-                translated_text = translated_text.replace(
-                    south, 
-                    f"<b>{south}</b><span style='color:#0066CC; font-size:0.85em;'>(북한말: {north})</span>"
                 )
                 
     return translated_text
@@ -143,7 +139,7 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 4. 페이지 설정 및 UI CSS
+# 4. 페이지 설정 및 UI CSS (채도/디자인 보정 코드 포함)
 # ==========================================
 st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
 
@@ -199,6 +195,7 @@ st.markdown("""
         box-shadow: 0px 2px 4px rgba(0,0,0,0.04);
     }
     
+    /* 선명한 채도 및 색상 구분 설정 */
     .other-user {
         align-self: flex-start;
     }
@@ -207,10 +204,10 @@ st.markdown("""
         justify-content: flex-start;
     }
     .other-user .message-bubble {
-        background-color: #FFF5F5;
-        color: #611313;
+        background-color: #FFF0F0;
+        color: #8A0000;
         border-top-left-radius: 2px;
-        border: 1px solid #FFD6D6;
+        border: 1px solid #FFC2C2;
     }
 
     .my-user {
@@ -221,10 +218,10 @@ st.markdown("""
         justify-content: flex-end;
     }
     .my-user .message-bubble {
-        background-color: #F0F7FF;
-        color: #0F2D59;
+        background-color: #EBF5FF;
+        color: #003B8E;
         border-top-right-radius: 2px;
-        border: 1px solid #D6E8FF;
+        border: 1px solid #B8DCFF;
     }
     
     div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
@@ -269,7 +266,6 @@ def render_chat_messages():
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                # 양방향 용어 자동 변환 적용
                 display_content = auto_translate_terms(msg["content"], msg.get("role", ""))
                 
                 chat_html += (
@@ -321,7 +317,7 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        st.info("💡 **양방향 언어 자동 변환 안내**: 대표적인 남북한 언어(예: 도시락↔곽밥, 아이스크림↔얼음보숭이) 작성 시 상대방 용어가 자동으로 함께 표기됩니다.")
+        st.info("💡 **양방향 언어 자동 번역 안내**: 남한말(예: 아이스크림, 도시락)을 입력하면 북한 용어로, 북한말(예: 곽밥, 얼음보숭이)을 입력하면 남한 용어로 자동 번역됩니다.")
 
     render_chat_messages()
 
@@ -490,7 +486,7 @@ elif st.session_state.page_step == "main":
     if st.session_state.selected_menu == "chat":
         render_live_chat()
 
-    # 2. SNS 피드 화면
+    # 2. SNS 피드 화면 (게시글 삭제 기능 추가)
     elif st.session_state.selected_menu == "sns":
         st.subheader("📸 일상 스토리 (SNS)")
 
@@ -534,13 +530,23 @@ elif st.session_state.page_step == "main":
                     post["comments"] = []
 
                 post_flag = get_flag_badge(post.get("role", ""))
-                st.markdown(f"#### {post_flag} **{post['author']}** <span style='font-size:12px; color:gray;'>({post['role']} · {post['time']})</span>", unsafe_allow_html=True)
+                
+                # 작성자 본인의 글인 경우 삭제 버튼 노출
+                p_col1, p_col2 = st.columns([5, 1])
+                with p_col1:
+                    st.markdown(f"#### {post_flag} **{post['author']}** <span style='font-size:12px; color:gray;'>({post['role']} · {post['time']})</span>", unsafe_allow_html=True)
+                with p_col2:
+                    if post["author"] == current_user:
+                        if st.button("🗑️ 삭제", key=f"del_post_{post.get('id', idx)}"):
+                            del st.session_state.sns_posts[idx]
+                            save_data()
+                            st.success("게시글이 삭제되었습니다.")
+                            st.rerun()
 
                 if post.get("image"):
                     st.image(post["image"], use_container_width=True)
 
                 if post.get("content"):
-                    # 피드 내용에도 양방향 용어 자동 변환 처리 적용
                     translated_post_content = auto_translate_terms(post["content"], post.get("role", ""))
                     st.markdown(translated_post_content, unsafe_allow_html=True)
 
@@ -560,9 +566,8 @@ elif st.session_state.page_step == "main":
                         st.rerun()
 
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
-                    for c in post["comments"]:
+                    for c_idx, c in enumerate(post["comments"]):
                         c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
-                        # 댓글에도 양방향 자동 변환 처리 적용
                         translated_comment = auto_translate_terms(c['content'], c.get('role', ''))
                         st.markdown(f"**{c_flag} {c['author']}**: {translated_comment} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
