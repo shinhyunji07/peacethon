@@ -8,18 +8,21 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 메모리 기반 초고속 글로벌 메시지 버퍼
+# 0. 메모리 기반 초고속 글로벌 메시지 버퍼 (실시간 초고속 동기화용)
 # ==========================================
 @st.cache_resource
 def get_global_chat_store():
+    """서버 메모리에 채팅 내역을 유지하여 파일 I/O 지연 없이 0.1초 내 동기화"""
     return []
 
+# 글로벌 메모리 버퍼 참조
 GLOBAL_CHAT_STORE = get_global_chat_store()
 
 # ==========================================
 # 1. 파일 데이터 로드 및 저장 함수
 # ==========================================
 def load_data():
+    """로컬 JSON 파일에서 프로필, 채팅 및 게시글 데이터 로드"""
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -36,6 +39,7 @@ def load_data():
     return {"profiles": [], "chat_messages": [], "sns_posts": []}
 
 def save_data():
+    """현재 세션 상태의 데이터를 로컬 JSON 파일에 저장"""
     data = {
         "profiles": st.session_state.profiles,
         "chat_messages": GLOBAL_CHAT_STORE,
@@ -47,6 +51,7 @@ def save_data():
     except Exception as e:
         st.error(f"데이터 저장 중 오류가 발생했습니다: {e}")
 
+# 최초 실행 시 파일에서 글로벌 채팅 메모리로 데이터 복사
 initial_data = load_data()
 if not GLOBAL_CHAT_STORE and initial_data.get("chat_messages"):
     GLOBAL_CHAT_STORE.extend(initial_data.get("chat_messages"))
@@ -55,6 +60,7 @@ if not GLOBAL_CHAT_STORE and initial_data.get("chat_messages"):
 # 2. 이미지 Base64 변환 유틸리티 함수
 # ==========================================
 def image_to_base64(uploaded_file):
+    """업로드된 이미지 파일을 Base64 문자열로 인코딩"""
     if uploaded_file is not None:
         bytes_data = uploaded_file.getvalue()
         base64_str = base64.b64encode(bytes_data).decode()
@@ -67,7 +73,7 @@ def image_to_base64(uploaded_file):
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
-# 카카오톡 스타일 말풍선 디자인 적용
+# 카카오톡 스타일 CSS 주입
 st.markdown("""
 <style>
     .chat-container {
@@ -77,17 +83,18 @@ st.markdown("""
         padding: 10px;
     }
     
-    /* 공통 말풍선 스타일 */
     .message-wrapper {
         display: flex;
         flex-direction: column;
         max-width: 70%;
     }
+    
     .message-info {
         font-size: 11px;
         color: #666;
         margin-bottom: 3px;
     }
+    
     .message-bubble {
         padding: 10px 14px;
         border-radius: 15px;
@@ -97,7 +104,7 @@ st.markdown("""
         box-shadow: 0px 1px 2px rgba(0,0,0,0.1);
     }
     
-    /* 상대방 메시지 (왼쪽 정렬, 파스텔 빨강/분홍) */
+    /* 상대방 메시지: 왼쪽 정렬 + 파스텔 레드 */
     .other-user {
         align-self: flex-start;
     }
@@ -105,12 +112,12 @@ st.markdown("""
         text-align: left;
     }
     .other-user .message-bubble {
-        background-color: #FFECEC; /* 파스텔 레드/핑 */
+        background-color: #FFECEC;
         color: #5C1D1D;
         border-top-left-radius: 2px;
     }
 
-    /* 내 메시지 (오른쪽 정렬, 파스텔 파랑) */
+    /* 내 메시지: 오른쪽 정렬 + 파스텔 블루 */
     .my-user {
         align-self: flex-end;
     }
@@ -118,7 +125,7 @@ st.markdown("""
         text-align: right;
     }
     .my-user .message-bubble {
-        background-color: #E8F2FF; /* 파스텔 블루 */
+        background-color: #E8F2FF;
         color: #1A365D;
         border-top-right-radius: 2px;
     }
@@ -176,7 +183,7 @@ def confirm_clear_chat():
             st.rerun()
 
 # ==========================================
-# 5. 초고속 실시간 카카오톡 스타일 채팅 Fragment (0.5초 감지)
+# 5. 실시간 카카오톡 스타일 채팅 Fragment (0.5초 자동 감지)
 # ==========================================
 @st.fragment(run_every=0.5)
 def render_live_chat():
@@ -210,6 +217,7 @@ def render_live_chat():
         else:
             current_user = st.session_state.user_nickname
             
+            # 전체 대화 내역을 하나의 HTML 문자열로 조합
             chat_html = '<div class="chat-container">'
             for msg in GLOBAL_CHAT_STORE:
                 is_me = (msg["author"] == current_user)
@@ -222,6 +230,8 @@ def render_live_chat():
                 </div>
                 '''
             chat_html += '</div>'
+            
+            # HTML을 브라우저에 정상 해석하도록 출력
             st.markdown(chat_html, unsafe_allow_html=True)
 
     if prompt := st.chat_input("메시지를 입력하세요..."):
