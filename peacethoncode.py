@@ -69,34 +69,46 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 3. 페이지 설정 및 사이드바 (채도 조절)
+# 3. 페이지 설정 및 사이드바 (태극 문양 배경)
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
 # 사이드바 UI 설정
 with st.sidebar:
     st.header("🎨 화면 테마 설정")
-    # 0% ~ 200% 범위로 설정 (기본값 100% = 기존 대비 2배 진한 색상)
-    sat_factor = st.slider("배경색 채도 (Color Saturation)", min_value=0, max_value=200, value=100, step=10)
+    bg_opacity = st.slider("태극 문양 배경 선명도", min_value=0, max_value=100, value=25, step=5)
 
-# 슬라이더 값에 따른 HSL 채도/명도 동적 계산
-# Red 톤 (Hue 0), Blue 톤 (Hue 210)
-red_sat = min(100, int(sat_factor * 0.45))       # 채도 계산
-red_light = max(70, int(98 - (sat_factor * 0.15)))  # 명도 계산 (채도 상승 시 더 선명하게)
-
-blue_sat = min(100, int(sat_factor * 0.5))
-blue_light = max(70, int(98 - (sat_factor * 0.14)))
+# 백분율을 opacity 수치(0.0 ~ 1.0)로 변환
+opacity_val = bg_opacity / 100.0
 
 st.markdown(f"""
 <style>
-    /* 태극 고채도 동적 그라데이션 배경 */
+    /* 전체 배경에 태극 문양 워터마크 배치 */
     .stApp {{
-        background: linear-gradient(145deg, 
-            hsl(0, {red_sat}%, {red_light}%) 0%, 
-            #FFFFFF 50%, 
-            hsl(210, {blue_sat}%, {blue_light}%) 100%) !important;
+        background-color: #f8f9fa !important;
+        background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/09/Taegeuk.svg') !important;
+        background-repeat: no-repeat !important;
+        background-position: center center !important;
+        background-size: min(80vw, 650px) auto !important;
+        background-attachment: fixed !important;
     }}
     
+    /* 태극 문양 오버레이 투명도 적용 */
+    .stApp::before {{
+        content: "";
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(248, 249, 250, {1 - opacity_val});
+        z-index: 0;
+        pointer-events: none;
+    }}
+    
+    /* 모든 메인 콘텐츠 레이어를 워터마크 위로 끌어올림 */
+    .stApp > header, .main {{
+        position: relative;
+        z-index: 1;
+    }}
+
     /* 채팅 컨테이너 */
     .chat-container {{
         display: flex;
@@ -126,7 +138,7 @@ st.markdown(f"""
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.08);
     }}
     
     .other-user {{
@@ -137,7 +149,7 @@ st.markdown(f"""
         justify-content: flex-start;
     }}
     .other-user .message-bubble {{
-        background-color: rgba(255, 235, 235, 0.95);
+        background-color: rgba(255, 240, 240, 0.92);
         color: #611313;
         border-top-left-radius: 2px;
         border: 1px solid #FFD6D6;
@@ -151,14 +163,14 @@ st.markdown(f"""
         justify-content: flex-end;
     }}
     .my-user .message-bubble {{
-        background-color: rgba(235, 244, 255, 0.95);
+        background-color: rgba(240, 246, 255, 0.92);
         color: #0F2D59;
         border-top-right-radius: 2px;
         border: 1px solid #D6E8FF;
     }}
     
-    /* 카드 및 박스 배경 투명도 */
-    div[data-testid="stExpander"], div[data-testid="stForm"] {{
+    /* 카드 및 입력 박스 반투명 가독성 확보 */
+    div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: rgba(255, 255, 255, 0.88) !important;
         border-radius: 10px;
     }}
