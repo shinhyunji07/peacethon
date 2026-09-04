@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import base64
+import time
 from datetime import datetime
 
 # 데이터 저장 파일 경로 설정
@@ -143,34 +144,96 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 카카오톡 스타일 채팅 함수 (JS Polling 기반)
+# 4. 실시간 카카오톡 스타일 채팅 함수
 # ==========================================
 def render_live_chat():
-    # 🔥 JS를 통한 무중단 실시간 동기화 (타이핑 중 멈춤 방지 및 0.8초 갱신)
+    c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
+    
+    with c_col1:
+        st.subheader("💬 실시간 소통 채팅방")
+        st.caption("⚡ 메시지 작성 후 Enter를 누르면 상대방에게 즉시 전달됩니다.")
+        
+    with c_col2:
+        if st.button("🔄 실시간 동기화", use_container_width=True):
+            st.rerun()
+
+    with c_col3:
+        if st.button("⬅️ 뒤로가기", use_container_width=True):
+            st.session_state.page_step = "menu"
+            st.rerun()
+
+    with c_col4:
+        if not st.session_state.confirm_clear_mode:
+            if st.button("🗑️ 초기화", use_container_width=True, disabled=len(GLOBAL_CHAT_STORE) == 0):
+                st.session_state.confirm_clear_mode = True
+                st.rerun()
+        else:
+            if st.button("🚨 정말 초기화?", type="primary", use_container_width=True):
+                GLOBAL_CHAT_STORE.clear()
+                save_data()
+                st.session_state.confirm_clear_mode = False
+                st.rerun()
+
+    if st.session_state.confirm_clear_mode:
+        warn_col1, warn_col2 = st.columns([3, 1])
+        with warn_col1:
+            st.warning("⚠️ 버튼을 한 번 더 누르면 대화 내역이 완전히 삭제됩니다!")
+        with warn_col2:
+            if st.button("취소", use_container_width=True):
+                st.session_state.confirm_clear_mode = False
+                st.rerun()
+    else:
+        st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
+
+    # 채팅 메시지 렌더링
+    chat_box = st.container(height=420)
+    with chat_box:
+        if not GLOBAL_CHAT_STORE:
+            st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
+        else:
+            current_user = st.session_state.user_nickname
+            chat_html = '<div class="chat-container">'
+            for msg in GLOBAL_CHAT_STORE:
+                is_me = (msg["author"] == current_user)
+                wrapper_class = "my-user" if is_me else "other-user"
+                chat_html += (
+                    f'<div class="message-wrapper {wrapper_class}">'
+                    f'<div class="message-info">{msg["avatar"]} <b>{msg["author"]}</b> ({msg["role"]})</div>'
+                    f'<div class="message-bubble">{msg["content"]}</div>'
+                    f'</div>'
+                )
+            chat_html += '</div>'
+            st.markdown(chat_html, unsafe_allow_html=True)
+
+    # 입력 폼
+    if prompt := st.chat_input("메시지를 입력하세요..."):
+        new_msg = {
+            "avatar": st.session_state.avatar_emoji,
+            "author": st.session_state.user_nickname,
+            "role": st.session_state.user_role,
+            "content": prompt
+        }
+        GLOBAL_CHAT_STORE.append(new_msg)
+        save_data()
+        st.rerun()
+
+    # 경량화된 실시간 갱신 트리거 (타이핑 방해 최소화)
     st.components.v1.html(
         """
         <script>
-            if (!window.chatInterval) {
-                window.chatInterval = setInterval(function() {
-                    // 사용자가 현재 입력창에 타이핑 중이 아닐 때만 새로고침 트리거
-                    const inputElem = window.parent.document.querySelector('textarea, input[type="text"]');
-                    if (inputElem && inputElem !== window.parent.document.activeElement) {
-                        const buttons = window.parent.document.querySelectorAll('button');
-                        for (let btn of buttons) {
-                            if (btn.innerText.includes('🔄 Sync')) {
-                                btn.click();
-                                break;
-                            }
-                        }
-                    }
-                }, 800);
-            }
+            setTimeout(function() {
+                const active = window.parent.document.activeElement;
+                const isTyping = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT');
+                if (!isTyping) {
+                    window.parent.postMessage({type: 'streamlit:rerun'}, '*');
+                }
+            }, 1500);
         </script>
         """,
         height=0
     )
 
-    c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
-    
-    with c_col1:
-        st.subheader("💬 실시간 소통 채팅방
+# ==========================================
+# STEP 1: 프로필 선택 및 생성 화면
+# ==========================================
+if st.session
