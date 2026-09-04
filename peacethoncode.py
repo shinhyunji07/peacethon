@@ -69,26 +69,32 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 3. 페이지 설정 및 사이드바 (투명도 조절)
+# 3. 페이지 설정 및 사이드바 (채도 조절)
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
 # 사이드바 UI 설정
 with st.sidebar:
     st.header("🎨 화면 테마 설정")
-    bg_opacity = st.slider("배경색 농도 (투명도)", min_value=0, max_value=100, value=60, step=5)
-    
-# 슬라이더 값을 RGBA 알파값(0.0 ~ 1.0)으로 변환
-alpha = bg_opacity / 100.0
+    # 0% ~ 200% 범위로 설정 (기본값 100% = 기존 대비 2배 진한 색상)
+    sat_factor = st.slider("배경색 채도 (Color Saturation)", min_value=0, max_value=200, value=100, step=10)
+
+# 슬라이더 값에 따른 HSL 채도/명도 동적 계산
+# Red 톤 (Hue 0), Blue 톤 (Hue 210)
+red_sat = min(100, int(sat_factor * 0.45))       # 채도 계산
+red_light = max(70, int(98 - (sat_factor * 0.15)))  # 명도 계산 (채도 상승 시 더 선명하게)
+
+blue_sat = min(100, int(sat_factor * 0.5))
+blue_light = max(70, int(98 - (sat_factor * 0.14)))
 
 st.markdown(f"""
 <style>
-    /* 태극 동적 투명도 그라데이션 배경 */
+    /* 태극 고채도 동적 그라데이션 배경 */
     .stApp {{
         background: linear-gradient(145deg, 
-            rgba(255, 235, 235, {alpha}) 0%, 
-            rgba(255, 255, 255, {alpha}) 50%, 
-            rgba(230, 242, 255, {alpha}) 100%) !important;
+            hsl(0, {red_sat}%, {red_light}%) 0%, 
+            #FFFFFF 50%, 
+            hsl(210, {blue_sat}%, {blue_light}%) 100%) !important;
     }}
     
     /* 채팅 컨테이너 */
@@ -153,7 +159,7 @@ st.markdown(f"""
     
     /* 카드 및 박스 배경 투명도 */
     div[data-testid="stExpander"], div[data-testid="stForm"] {{
-        background-color: rgba(255, 255, 255, 0.85) !important;
+        background-color: rgba(255, 255, 255, 0.88) !important;
         border-radius: 10px;
     }}
 </style>
