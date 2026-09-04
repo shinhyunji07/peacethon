@@ -8,6 +8,39 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
+# 0. 북한 용어 -> 남한 용어 자동 변환 사전
+# ==========================================
+NORTH_TO_SOUTH_DICT = {
+    "곽밥": "도시락",
+    "살결물": "스킨/로션",
+    "손전화": "휴대전화",
+    "가락지빵": "도넛",
+    "얼음보숭이": "아이스크림",
+    "일없습니다": "괜찮습니다",
+    "일없다": "괜찮다",
+    "문화휴식터": "공원/휴양지",
+    "볼차기": "축구",
+    "단불": "히터/난방",
+    "기름밥": "볶음밥",
+    "손기척": "노크",
+    "밥가마": "밥솥",
+    "속도전가루": "미숫가루",
+    "불고기": "너비아니/구이",
+    "위생종이": "휴지"
+}
+
+def auto_translate_north_terms(text, role):
+    """북한 청년이 작성한 글인 경우 용어를 남한 표준어로 자동 변환합니다."""
+    if "북한" not in role or not text:
+        return text
+    
+    translated_text = text
+    for north, south in NORTH_TO_SOUTH_DICT.items():
+        if north in translated_text:
+            translated_text = translated_text.replace(north, f"<b>{south}</b><span style='color:#888; font-size:0.85em;'>(←{north})</span>")
+    return translated_text
+
+# ==========================================
 # 1. 메모리 기반 초고속 글로벌 메시지 버퍼
 # ==========================================
 @st.cache_resource
@@ -75,20 +108,25 @@ st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout=
 
 st.markdown("""
 <style>
-    /* 타이틀 강조 전용 스타일 */
-    .brand-title {
+    .logo-text {
         font-size: 2.2rem;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+        color: #0F2D59;
+        margin-bottom: 0.1rem;
+    }
+    .logo-text-small {
+        font-size: 1.5rem;
         font-weight: 800;
-        color: #1E293B;
-        margin-bottom: 0.2rem;
+        letter-spacing: -0.5px;
+        color: #0F2D59;
     }
     .brand-subtitle {
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: #64748B;
         margin-bottom: 1.5rem;
     }
 
-    /* 채팅 스타일 */
     .chat-container {
         display: flex;
         flex-direction: column;
@@ -190,10 +228,13 @@ def render_chat_messages():
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
+                # 북한 용어 자동 변환 처리 적용
+                display_content = auto_translate_north_terms(msg["content"], msg.get("role", ""))
+                
                 chat_html += (
                     f'<div class="message-wrapper {wrapper_class}">'
                     f'<div class="message-info">{flag_img} <b>{msg["author"]}</b> <span style="font-size:11px; color:#777;">({msg["role"]})</span></div>'
-                    f'<div class="message-bubble">{msg["content"]}</div>'
+                    f'<div class="message-bubble">{display_content}</div>'
                     f'</div>'
                 )
             chat_html += '</div>'
@@ -239,7 +280,7 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
+        st.info("💡 **자동 변환 안내**: 북한 청년 프로필로 생소한 어휘(예: 곽밥, 손전화 등)를 입력하면 남한 표준어로 자동 변환되어 표기됩니다.")
 
     render_chat_messages()
 
@@ -262,8 +303,8 @@ if st.session_state.page_step == "profile":
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-        st.markdown('<div class="brand-title">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="brand-subtitle">디지털로 경계의 벽을 허무다 </div>', unsafe_allow_html=True)
+        st.markdown('<div class="logo-text">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="brand-subtitle">남북 청년의 마음과 내일을 이어가는 소통 플랫폼</div>', unsafe_allow_html=True)
         
         st.subheader("프로필을 선택하거나 생성해주세요")
         st.divider()
@@ -355,7 +396,7 @@ elif st.session_state.page_step == "menu":
 
     with col2:
         flag_img = get_flag_badge(st.session_state.user_role)
-        st.markdown('<div class="brand-title">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="logo-text">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
         st.markdown(f"### 반갑습니다, {flag_img} **{st.session_state.user_nickname}**님!", unsafe_allow_html=True)
         st.write("원하시는 활동을 선택해주세요.")
         st.divider()
@@ -387,7 +428,7 @@ elif st.session_state.page_step == "main":
     
     flag_img = get_flag_badge(st.session_state.user_role)
     with nav_col1:
-        st.markdown('<h3 style="margin:0; padding:0;">🕊️ PUAC IT-DA(잇다)</h3>', unsafe_allow_html=True)
+        st.markdown('<div class="logo-text-small">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
         st.markdown(f"접속 프로필: {flag_img} **{st.session_state.user_nickname}** ({st.session_state.user_role})", unsafe_allow_html=True)
     
     with nav_col2:
@@ -458,7 +499,9 @@ elif st.session_state.page_step == "main":
                     st.image(post["image"], use_container_width=True)
 
                 if post.get("content"):
-                    st.write(post["content"])
+                    # 피드 내용에도 북한 용어 자동 변환 처리 적용
+                    translated_post_content = auto_translate_north_terms(post["content"], post.get("role", ""))
+                    st.markdown(translated_post_content, unsafe_allow_html=True)
 
                 like_count = len(post["likes"])
                 has_liked = current_user in post["likes"]
@@ -478,7 +521,9 @@ elif st.session_state.page_step == "main":
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
                     for c in post["comments"]:
                         c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
-                        st.markdown(f"**{c_flag} {c['author']}**: {c['content']} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
+                        # 댓글에도 자동 변환 처리 적용
+                        translated_comment = auto_translate_north_terms(c['content'], c.get('role', ''))
+                        st.markdown(f"**{c_flag} {c['author']}**: {translated_comment} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
                     with st.form(key=f"comment_form_{post.get('id', idx)}"):
                         comment_text = st.text_input("댓글을 남겨보세요...", key=f"c_in_{post.get('id', idx)}")
