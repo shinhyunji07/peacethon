@@ -3,6 +3,7 @@ import json
 import os
 import base64
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh  # 🔥 자동 새로고침 패키지
 
 # 데이터 저장 파일 경로 설정
 DATA_FILE = "tongil_talk_data.json"
@@ -143,26 +144,17 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 카카오톡 스타일 채팅 함수 (0.5초 자동 동기화)
+# 4. 실시간 카카오톡 스타일 채팅 함수 (autorefresh 적용)
 # ==========================================
 def render_live_chat():
-    # ⚡ 0.5초(500ms)마다 브라우저에서 자동 새로고침을 트리거하는 자바스크립트
-    st.components.v1.html(
-        """
-        <script>
-            setTimeout(function() {
-                window.parent.postMessage({type: 'streamlit:rerun'}, '*');
-            }, 500);
-        </script>
-        """,
-        height=0
-    )
+    # 🔥 1000ms(1초)마다 자동으로 화면을 새로고침합니다.
+    st_autorefresh(interval=1000, key="chat_autorefresh")
 
     c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
     
     with c_col1:
         st.subheader("💬 실시간 소통 채팅방")
-        st.caption("⚡ 카카오톡 스타일의 실시간 채팅창입니다. (0.5초 자동 반영)")
+        st.caption("⚡ 카카오톡 스타일의 실시간 채팅창입니다. (1초 자동 동기화)")
         
     with c_col2:
         if st.button("🔄 수동 새로고침", use_container_width=True):
