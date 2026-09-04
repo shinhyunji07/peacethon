@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import time
 from datetime import datetime
 
 # 데이터 저장 파일 경로 설정
@@ -64,7 +65,6 @@ if "sns_posts" not in st.session_state:
 # ==========================================
 # 3. 삭제 확인 모달 팝업 Dialog 정의
 # ==========================================
-# (1) 프로필 삭제 확인 팝업
 @st.dialog("⚠️ 프로필 삭제")
 def confirm_delete_profile(profile_idx, profile_name):
     st.write(f"정말로 **'{profile_name}'** 프로필을 삭제하시겠습니까?")
@@ -81,7 +81,6 @@ def confirm_delete_profile(profile_idx, profile_name):
         if st.button("취소", use_container_width=True):
             st.rerun()
 
-# (2) 대화방 초기화 확인 팝업
 @st.dialog("⚠️ 대화방 전체 초기화")
 def confirm_clear_chat():
     st.write("정말로 대화방의 모든 메시지를 삭제하시겠습니까?")
@@ -98,6 +97,61 @@ def confirm_clear_chat():
             st.rerun()
 
 # ==========================================
+# 4. 실시간 독립 채팅용 Fragment 함수 (자동/수동 새로고침 적용)
+# ==========================================
+@st.fragment(run_every=2)
+def render_live_chat():
+    """페이지 전체를 새로고침하지 않고 채팅 영역만 2초 간격으로 로컬 파일과 동기화"""
+    # 파일에서 최신 채팅 내역을 불러와 세션 업데이트
+    latest_data = load_data()
+    st.session_state.chat_messages = latest_data.get("chat_messages", [])
+
+    # 상단 제어 바 (새로고침, 뒤로가기, 초기화 버튼)
+    c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
+    
+    with c_col1:
+        st.subheader("💬 실시간 소통 채팅방")
+        st.caption("⚡ 2초마다 다른 사용자의 메시지가 자동 반영됩니다.")
+        
+    with c_col2:
+        if st.button("🔄 대화 새로고침", use_container_width=True):
+            st.rerun(scope="fragment")
+
+    with c_col3:
+        if st.button("⬅️ 뒤로가기", use_container_width=True):
+            st.session_state.page_step = "menu"
+            st.rerun()
+
+    with c_col4:
+        if st.session_state.chat_messages:
+            if st.button("🗑️ 초기화", use_container_width=True):
+                confirm_clear_chat()
+
+    st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
+
+    # 채팅 메시지 출력 박스
+    chat_box = st.container(height=420)
+    with chat_box:
+        if not st.session_state.chat_messages:
+            st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
+        for msg in st.session_state.chat_messages:
+            with st.chat_message("user", avatar=msg["avatar"]):
+                st.markdown(f"**{msg['author']}** ({msg['role']})")
+                st.write(msg["content"])
+
+    # 메시지 입력 창
+    if prompt := st.chat_input("메시지를 입력하세요..."):
+        new_msg = {
+            "avatar": st.session_state.avatar_emoji,
+            "author": st.session_state.user_nickname,
+            "role": st.session_state.user_role,
+            "content": prompt
+        }
+        st.session_state.chat_messages.append(new_msg)
+        save_data()
+        st.rerun(scope="fragment")
+
+# ==========================================
 # STEP 1: 프로필 선택 및 생성 화면
 # ==========================================
 if st.session_state.page_step == "profile":
@@ -110,10 +164,8 @@ if st.session_state.page_step == "profile":
         st.caption("남북 청년들의 자유로운 소통 공간에 오신 것을 환영합니다.")
         st.divider()
 
-        # 기존 프로필 목록 가져오기
         profile_options = [f"{p['avatar']} {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
         
-        # 1. 기존 프로필 선택 및 삭제 섹션
         if profile_options:
             st.markdown("### 👤 기존 프로필 선택")
             selected_profile_str = st.selectbox(
@@ -140,7 +192,6 @@ if st.session_state.page_step == "profile":
             st.markdown("<br>", unsafe_allow_html=True)
             st.divider()
 
-        # 2. 새 프로필 생성 섹션
         st.markdown("### ✨ 새 프로필 생성")
         nickname_input = st.text_input("새로 사용할 닉네임을 입력하세요", value="")
         role_input = st.radio("소속을 선택해주세요", ["🇰🇷 남한 청년", "🇰🇵 북한 청년"], index=0)
@@ -229,39 +280,9 @@ elif st.session_state.page_step == "main":
 
     st.divider()
 
-    # 1. 채팅창 화면
+    # 1. 채팅창 화면 (Fragment 기반 실시간 채팅 실행)
     if st.session_state.selected_menu == "chat":
-        chat_header_col1, chat_header_col2 = st.columns([3, 1])
-        
-        with chat_header_col1:
-            st.subheader("💬 실시간 소통 채팅방")
-            st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
-            
-        with chat_header_col2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.session_state.chat_messages:
-                if st.button("🗑️ 대화방 초기화", use_container_width=True):
-                    confirm_clear_chat()
-
-        chat_box = st.container(height=450)
-        with chat_box:
-            if not st.session_state.chat_messages:
-                st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
-            for msg in st.session_state.chat_messages:
-                with st.chat_message("user", avatar=msg["avatar"]):
-                    st.markdown(f"**{msg['author']}** ({msg['role']})")
-                    st.write(msg["content"])
-
-        if prompt := st.chat_input("메시지를 입력하세요..."):
-            new_msg = {
-                "avatar": st.session_state.avatar_emoji,
-                "author": st.session_state.user_nickname,
-                "role": st.session_state.user_role,
-                "content": prompt
-            }
-            st.session_state.chat_messages.append(new_msg)
-            save_data()
-            st.rerun()
+        render_live_chat()
 
     # 2. SNS 게시판 화면
     elif st.session_state.selected_menu == "sns":
@@ -292,6 +313,10 @@ elif st.session_state.page_step == "main":
 
         sns_box = st.container(height=450)
         with sns_box:
+            # SNS 목록 최신화
+            latest_data = load_data()
+            st.session_state.sns_posts = latest_data.get("sns_posts", [])
+            
             if not st.session_state.sns_posts:
                 st.info("아직 등록된 게시글이 없습니다. 첫 번째 글의 주인공이 되어보세요!")
             else:
