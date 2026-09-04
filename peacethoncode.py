@@ -8,7 +8,24 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 메모리 기반 초고속 글로벌 메시지 버퍼
+# 0. 민주평화통일자문회의 로고 (SVG Vector Base64)
+# ==========================================
+PUAC_LOGO_SVG = (
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDA1MDAi"
+    "Pg0KICA8Y2lyY2xlIGN4PSIyNTAiIGN5PSIyNTAiIHI9IjI0MCIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tl"
+    "PSIjRDRENEI5IiBzdHJva2Utd2lkdGg9IjEwIi8+DQogIDxjaXJjbGUgY3g9IjI1MCIgY3k9IjI1MCIg"
+    "cj0iMTgwIiBmaWxsPSJub25lIiBzdHJva2U9IiNENEQ0QjkiIHN0cm9rZS13aWR0aD0iNCIvPg0KICA8"
+    "ZyBmaWxsPSIjRDRENEI5Ij4NCiAgICA8cGF0aCBkPSJNMjUwIDYwQzIwMCA2MCAxOTAgMTIwIDI1MCAx"
+    "NTBDMzAwIDEyMCAyOTAgNjAgMjUwIDYwWiIvPg0KICAgIDxwYXRoIGQ9Ik0yNTAgNDQwQzIwMCA0NDAg"
+    "MTkwIDM4MCAyNTAgMzUwQzMwMCAzODAgMjkwIDQ0MCAyNTAgNDQwWiIvPg0KICAgIDxwYXRoIGQ9Ik02"
+    "MCAyNTBDNjAgMjAwIDEyMCAxOTAgMTUwIDI1MEMxMjAgMzAwIDYwIDI5MCA2MCAyNTBaIi8+DQogICAg"
+    "PHBhdGggZD0iTTQ0MCAyNTBDNDQwIDIwMCAzODAgMTkwIDM1MCAyNTBDMzgwIDMwMCA0NDAgMjkwIDQ0"
+    "MCAyNTBaIi8+DQogICAgPGNpcmNsZSBjeD0iMjUwIiBjeT0iMjUwIiByPSI1MCIgZmlsbD0iI0Q0RDRC"
+    "OSIvPg0KICA8L2c+DQo8L3N2Zz4="
+)
+
+# ==========================================
+# 1. 메모리 기반 초고속 글로벌 메시지 버퍼
 # ==========================================
 @st.cache_resource
 def get_global_chat_store():
@@ -17,7 +34,7 @@ def get_global_chat_store():
 GLOBAL_CHAT_STORE = get_global_chat_store()
 
 # ==========================================
-# 1. 파일 데이터 로드 및 저장 함수
+# 2. 파일 데이터 로드 및 저장 함수
 # ==========================================
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -52,7 +69,7 @@ if not GLOBAL_CHAT_STORE and initial_data.get("chat_messages"):
     GLOBAL_CHAT_STORE.extend(initial_data.get("chat_messages"))
 
 # ==========================================
-# 2. 이미지 Base64 및 뱃지 유틸리티 함수
+# 3. 이미지 Base64 및 뱃지 유틸리티 함수
 # ==========================================
 def image_to_base64(uploaded_file):
     if uploaded_file is not None:
@@ -69,35 +86,65 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 3. 페이지 설정 및 사이드바 (채도 조절)
+# 4. 페이지 설정 및 배경 레이어 CSS
 # ==========================================
-st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
+st.set_page_config(page_title="민주평통 잇다 (IT-DA)", page_icon="🕊️", layout="wide")
 
 # 사이드바 UI 설정
 with st.sidebar:
     st.header("🎨 화면 테마 설정")
-    # 0% ~ 200% 범위로 설정 (기본값 100% = 기존 대비 2배 진한 색상)
-    sat_factor = st.slider("배경색 채도 (Color Saturation)", min_value=0, max_value=200, value=100, step=10)
+    bg_opacity = st.slider("민주평통 로고 배경 선명도", min_value=0, max_value=100, value=25, step=5)
 
-# 슬라이더 값에 따른 HSL 채도/명도 동적 계산
-# Red 톤 (Hue 0), Blue 톤 (Hue 210)
-red_sat = min(100, int(sat_factor * 0.45))       # 채도 계산
-red_light = max(70, int(98 - (sat_factor * 0.15)))  # 명도 계산 (채도 상승 시 더 선명하게)
-
-blue_sat = min(100, int(sat_factor * 0.5))
-blue_light = max(70, int(98 - (sat_factor * 0.14)))
+opacity_val = bg_opacity / 100.0
 
 st.markdown(f"""
 <style>
-    /* 태극 고채도 동적 그라데이션 배경 */
+    /* 1. 최하단 앱 전체 투명 배경 설정 */
     .stApp {{
-        background: linear-gradient(145deg, 
-            hsl(0, {red_sat}%, {red_light}%) 0%, 
-            #FFFFFF 50%, 
-            hsl(210, {blue_sat}%, {blue_light}%) 100%) !important;
+        background-color: transparent !important;
+    }}
+
+    /* 2. 메인 컨테이너에 민주평통 로고 배경 배치 */
+    [data-testid="stMain"] {{
+        background-color: #FAFAFA !important;
+        background-image: url('data:image/svg+xml;base64,{PUAC_LOGO_SVG}') !important;
+        background-repeat: no-repeat !important;
+        background-position: center center !important;
+        background-size: min(70vw, 500px) auto !important;
+        background-attachment: fixed !important;
+        background-blend-mode: overlay;
     }}
     
-    /* 채팅 컨테이너 */
+    /* 3. 배경 투명도 레이어 */
+    [data-testid="stMain"]::before {{
+        content: "";
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(250, 250, 250, {1.0 - opacity_val});
+        pointer-events: none;
+        z-index: 0;
+    }}
+
+    /* 4. 본문 컨테이너 z-index 보장 */
+    [data-testid="stMain"] > div {{
+        position: relative;
+        z-index: 1;
+    }}
+
+    /* 로고 타이틀 전용 스타일 */
+    .puac-title-box {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }}
+    
+    .puac-logo-img {{
+        width: 48px;
+        height: 48px;
+    }}
+
+    /* 채팅 스타일 */
     .chat-container {{
         display: flex;
         flex-direction: column;
@@ -126,7 +173,7 @@ st.markdown(f"""
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.06);
     }}
     
     .other-user {{
@@ -137,7 +184,7 @@ st.markdown(f"""
         justify-content: flex-start;
     }}
     .other-user .message-bubble {{
-        background-color: rgba(255, 235, 235, 0.95);
+        background-color: rgba(255, 238, 238, 0.93);
         color: #611313;
         border-top-left-radius: 2px;
         border: 1px solid #FFD6D6;
@@ -151,14 +198,14 @@ st.markdown(f"""
         justify-content: flex-end;
     }}
     .my-user .message-bubble {{
-        background-color: rgba(235, 244, 255, 0.95);
+        background-color: rgba(238, 245, 255, 0.93);
         color: #0F2D59;
         border-top-right-radius: 2px;
         border: 1px solid #D6E8FF;
     }}
     
-    /* 카드 및 박스 배경 투명도 */
-    div[data-testid="stExpander"], div[data-testid="stForm"] {{
+    /* 카드 반투명 처리 */
+    div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: rgba(255, 255, 255, 0.88) !important;
         border-radius: 10px;
     }}
@@ -185,7 +232,7 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 채팅 내역 프래그먼트 (1초 자동 갱신)
+# 5. 실시간 채팅 내역 프래그먼트
 # ==========================================
 @st.fragment(run_every=1)
 def render_chat_messages():
@@ -211,13 +258,13 @@ def render_chat_messages():
             st.markdown(chat_html, unsafe_allow_html=True)
 
 # ==========================================
-# 5. 메인 채팅 레이아웃 함수
+# 6. 메인 채팅 레이아웃 함수
 # ==========================================
 def render_live_chat():
     c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
     
     with c_col1:
-        st.subheader("💬 실시간 소통 채팅방")
+        st.subheader("💬 실시간 소통 라운지")
         st.caption("⚡ 전체 화면 깜빡임 없이 1초마다 실시간 대화가 동기화됩니다.")
         
     with c_col2:
@@ -252,10 +299,8 @@ def render_live_chat():
     else:
         st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
 
-    # 실시간 메시지 영역
     render_chat_messages()
 
-    # 메시지 입력창
     if prompt := st.chat_input("메시지를 입력하세요..."):
         new_msg = {
             "avatar": st.session_state.avatar_emoji,
@@ -275,9 +320,18 @@ if st.session_state.page_step == "profile":
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-        st.title("🕊️ 통일 톡톡")
+        # 타이틀 상단에 민주평통 로고 및 IT-DA 브랜드 적용
+        st.markdown(
+            f'''
+            <div class="puac-title-box">
+                <img src="data:image/svg+xml;base64,{PUAC_LOGO_SVG}" class="puac-logo-img"/>
+                <h1 style="margin:0; padding:0;">민주평통 잇다 <span style="font-size:20px; color:#666;">(IT-DA)</span></h1>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
         st.subheader("프로필을 선택하거나 생성해주세요")
-        st.caption("남북 청년들의 자유로운 소통 공간에 오신 것을 환영합니다.")
+        st.caption("남북 청년의 마음과 내일을 이어가는 소통 플랫폼입니다.")
         st.divider()
 
         profile_options = [f"[{p['role'].split()[0]}] {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
@@ -367,7 +421,15 @@ elif st.session_state.page_step == "menu":
 
     with col2:
         flag_img = get_flag_badge(st.session_state.user_role)
-        st.title("🕊️ 통일 톡톡")
+        st.markdown(
+            f'''
+            <div class="puac-title-box">
+                <img src="data:image/svg+xml;base64,{PUAC_LOGO_SVG}" class="puac-logo-img"/>
+                <h1 style="margin:0; padding:0;">민주평통 잇다 <span style="font-size:20px; color:#666;">(IT-DA)</span></h1>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
         st.markdown(f"### 반갑습니다, {flag_img} **{st.session_state.user_nickname}**님!", unsafe_allow_html=True)
         st.write("원하시는 활동을 선택해주세요.")
         st.divider()
@@ -375,13 +437,13 @@ elif st.session_state.page_step == "menu":
         btn_col1, btn_col2 = st.columns(2)
 
         with btn_col1:
-            if st.button("💬 실시간 채팅방\n\n자유로운 실시간 대화 나누기", use_container_width=True, type="primary"):
+            if st.button("💬 실시간 라운지\n\n자유로운 실시간 대화 나누기", use_container_width=True, type="primary"):
                 st.session_state.selected_menu = "chat"
                 st.session_state.page_step = "main"
                 st.rerun()
 
         with btn_col2:
-            if st.button("📸 인스타 스타일 SNS\n\n사진 및 일상 공유하기", use_container_width=True):
+            if st.button("📸 일상 스토리 (SNS)\n\n사진 및 스토리 공유하기", use_container_width=True):
                 st.session_state.selected_menu = "sns"
                 st.session_state.page_step = "main"
                 st.rerun()
@@ -399,12 +461,20 @@ elif st.session_state.page_step == "main":
     
     flag_img = get_flag_badge(st.session_state.user_role)
     with nav_col1:
-        st.title("🕊️ 통일 톡톡")
+        st.markdown(
+            f'''
+            <div class="puac-title-box">
+                <img src="data:image/svg+xml;base64,{PUAC_LOGO_SVG}" style="width:36px; height:36px;"/>
+                <h2 style="margin:0; padding:0;">민주평통 잇다 <span style="font-size:16px; color:#666;">(IT-DA)</span></h2>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
         st.markdown(f"접속 프로필: {flag_img} **{st.session_state.user_nickname}** ({st.session_state.user_role})", unsafe_allow_html=True)
     
     with nav_col2:
         other_menu = "sns" if st.session_state.selected_menu == "chat" else "chat"
-        other_menu_label = "📸 SNS 피드로" if st.session_state.selected_menu == "chat" else "💬 실시간 채팅으로"
+        other_menu_label = "📸 일상 스토리로" if st.session_state.selected_menu == "chat" else "💬 실시간 라운지로"
         if st.button(f"🔄 {other_menu_label}", use_container_width=True):
             st.session_state.selected_menu = other_menu
             st.rerun()
@@ -422,7 +492,7 @@ elif st.session_state.page_step == "main":
 
     # 2. SNS 피드 화면
     elif st.session_state.selected_menu == "sns":
-        st.subheader("📸 일상 피드 (SNS)")
+        st.subheader("📸 일상 스토리 (SNS)")
 
         with st.expander("✨ 새 피드 작성하기 (사진 첨부)", expanded=False):
             post_content = st.text_area("내용을 입력해주세요", height=90, key="post_content_input")
