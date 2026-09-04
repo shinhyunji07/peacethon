@@ -76,34 +76,34 @@ st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️"
 # 사이드바 UI 설정
 with st.sidebar:
     st.header("🎨 화면 테마 설정")
-    bg_opacity = st.slider("태극 문양 배경 선명도", min_value=0, max_value=100, value=25, step=5)
+    bg_opacity = st.slider("태극 문양 배경 진하기 (투명도)", min_value=0, max_value=100, value=30, step=5)
 
 # 백분율을 opacity 수치(0.0 ~ 1.0)로 변환
 opacity_val = bg_opacity / 100.0
 
 st.markdown(f"""
 <style>
-    /* 전체 배경에 태극 문양 워터마크 배치 */
+    /* 웹 앱 배경을 흰색으로 고정 */
     .stApp {{
-        background-color: #f8f9fa !important;
-        background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/09/Taegeuk.svg') !important;
-        background-repeat: no-repeat !important;
-        background-position: center center !important;
-        background-size: min(80vw, 650px) auto !important;
-        background-attachment: fixed !important;
+        background-color: #FFFFFF !important;
+        position: relative;
     }}
     
-    /* 태극 문양 오버레이 투명도 적용 */
+    /* 태극 문양 이미지를 가림막 없이 선명하게 고정 레이어로 배치 */
     .stApp::before {{
         content: "";
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        background-color: rgba(248, 249, 250, {1 - opacity_val});
-        z-index: 0;
+        background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/09/Taegeuk.svg');
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: min(80vw, 600px) auto;
+        opacity: {opacity_val};
         pointer-events: none;
+        z-index: 0;
     }}
     
-    /* 모든 메인 콘텐츠 레이어를 워터마크 위로 끌어올림 */
+    /* 메인 콘텐츠 레이어를 워터마크 위로 끌어올림 */
     .stApp > header, .main {{
         position: relative;
         z-index: 1;
@@ -149,7 +149,7 @@ st.markdown(f"""
         justify-content: flex-start;
     }}
     .other-user .message-bubble {{
-        background-color: rgba(255, 240, 240, 0.92);
+        background-color: rgba(255, 235, 235, 0.95);
         color: #611313;
         border-top-left-radius: 2px;
         border: 1px solid #FFD6D6;
@@ -163,7 +163,7 @@ st.markdown(f"""
         justify-content: flex-end;
     }}
     .my-user .message-bubble {{
-        background-color: rgba(240, 246, 255, 0.92);
+        background-color: rgba(235, 244, 255, 0.95);
         color: #0F2D59;
         border-top-right-radius: 2px;
         border: 1px solid #D6E8FF;
@@ -171,7 +171,7 @@ st.markdown(f"""
     
     /* 카드 및 입력 박스 반투명 가독성 확보 */
     div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
-        background-color: rgba(255, 255, 255, 0.88) !important;
+        background-color: rgba(255, 255, 255, 0.90) !important;
         border-radius: 10px;
     }}
 </style>
