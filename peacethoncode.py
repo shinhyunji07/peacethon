@@ -51,28 +51,34 @@ SOUTH_TO_NORTH_DICT = {
     "휴지": "위생종이"
 }
 
-def auto_translate_terms(text, role):
-    """작성자 소속에 따라 상대방 언어로 용어를 직접 자동 번역합니다."""
+def auto_translate_terms(text, viewer_role):
+    """
+    작성자 주체와 관계없이, 현재 접속해 있는 사용자(viewer_role)의 언어 환경에 맞게
+    사전 단어를 자동으로 번역하여 보여줍니다.
+    """
     if not text:
         return text
     
     translated_text = str(text)
     
-    if "남한" in role:
-        sorted_south_dict = sorted(SOUTH_TO_NORTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
-        for south, north in sorted_south_dict:
-            if south in translated_text:
-                translated_text = translated_text.replace(
-                    south, 
-                    f"<b>{north}</b><span style='color:#0055FF; font-size:0.85em;'>(←{south})</span>"
-                )
-    elif "북한" in role:
+    # [1] 현재 접속자가 '남한 청년'인 경우 -> 텍스트 내의 '북한 단어'를 '남한 단어'로 번역해서 보여줌
+    if "남한" in viewer_role:
         sorted_north_dict = sorted(NORTH_TO_SOUTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
         for north, south in sorted_north_dict:
             if north in translated_text:
                 translated_text = translated_text.replace(
                     north, 
-                    f"<b>{south}</b><span style='color:#D90000; font-size:0.85em;'>(←{north})</span>"
+                    f"<b>{south}</b><span style='color:#0055FF; font-size:0.85em;'>(←{north})</span>"
+                )
+                
+    # [2] 현재 접속자가 '북한 청년'인 경우 -> 텍스트 내의 '남한 단어'를 '북한 단어'로 번역해서 보여줌
+    elif "북한" in viewer_role:
+        sorted_south_dict = sorted(SOUTH_TO_NORTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
+        for south, north in sorted_south_dict:
+            if south in translated_text:
+                translated_text = translated_text.replace(
+                    south, 
+                    f"<b>{north}</b><span style='color:#D90000; font-size:0.85em;'>(←{south})</span>"
                 )
                 
     return translated_text
@@ -208,7 +214,7 @@ st.markdown(f"""
         box-shadow: 0px 2px 6px rgba(0,0,0,0.06);
     }}
     
-    /* 상대방 (북한) 말풍선 */
+    /* 상대방 말풍선 */
     .other-user {{
         align-self: flex-start;
     }}
@@ -223,7 +229,7 @@ st.markdown(f"""
         border: 1px solid #FFC2C7;
     }}
 
-    /* 나 (남한) 말풍선 */
+    /* 나 말풍선 */
     .my-user {{
         align-self: flex-end;
     }}
@@ -275,13 +281,15 @@ def render_chat_messages():
             st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
         else:
             current_user = st.session_state.user_nickname
+            current_role = st.session_state.user_role  # 접속자 역할
             chat_html = '<div class="chat-container">'
             for msg in GLOBAL_CHAT_STORE:
                 is_me = (msg["author"] == current_user)
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                display_content = auto_translate_terms(msg["content"], msg.get("role", ""))
+                # 작성 주체 상관없이 '접속한 내 소속(current_role)' 기준 자동 변환
+                display_content = auto_translate_terms(msg["content"], current_role)
                 
                 chat_html += (
                     f'<div class="message-wrapper {wrapper_class}">'
@@ -332,7 +340,7 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        st.info("💡 **양방향 언어 자동 번역 안내**: 남한말(예: 아이스크림, 도시락)을 입력하면 북한 용어로, 북한말(예: 곽밥, 얼음보숭이)을 입력하면 남한 용어로 자동 번역됩니다.")
+        st.info("💡 **접속 국가 맞춤 자동 번역 안내**: 작성한 주체와 관계없이, 접속한 프로필의 언어 환경에 맞는 상대 국가 용어가 내 언어로 자동 실시간 번역됩니다.")
 
     render_chat_messages()
 
@@ -541,6 +549,7 @@ elif st.session_state.page_step == "main":
             st.info("아직 등록된 피드가 없습니다. 첫 사진의 주인공이 되어보세요!")
         else:
             current_user = st.session_state.user_nickname
+            current_role = st.session_state.user_role  # 접속자 역할
 
             for idx, post in enumerate(st.session_state.sns_posts):
                 if "likes" not in post:
@@ -565,7 +574,8 @@ elif st.session_state.page_step == "main":
                     st.image(post["image"], use_container_width=True)
 
                 if post.get("content"):
-                    translated_post_content = auto_translate_terms(post["content"], post.get("role", ""))
+                    # 접속자 환경(current_role) 기준으로 SNS 게시글 내용 자동 번역
+                    translated_post_content = auto_translate_terms(post["content"], current_role)
                     st.markdown(translated_post_content, unsafe_allow_html=True)
 
                 like_count = len(post["likes"])
@@ -586,7 +596,8 @@ elif st.session_state.page_step == "main":
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
                     for c_idx, c in enumerate(post["comments"]):
                         c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
-                        translated_comment = auto_translate_terms(c['content'], c.get('role', ''))
+                        # 접속자 환경(current_role) 기준으로 댓글 자동 번역
+                        translated_comment = auto_translate_terms(c['content'], current_role)
                         st.markdown(f"**{c_flag} {c['author']}**: {translated_comment} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
                     with st.form(key=f"comment_form_{post.get('id', idx)}"):
