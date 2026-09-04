@@ -139,22 +139,21 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 4. 페이지 기본 설정
+# 4. 페이지 기본 설정 및 진해진 색상 반영
 # ==========================================
 st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
 
-# 사이드바에서 배경 투명도(색상 농도) 조절 슬라이더 설정
+# 사이드바에서 배경 투명도/채도 농도 조절 슬라이더
 st.sidebar.title("🎨 테마 설정")
-bg_opacity = st.sidebar.slider("배경색 농도/투명도 조절", min_value=10, max_value=100, value=80, step=5) / 100.0
+bg_opacity = st.sidebar.slider("배경색 채도/농도 조절 (%)", min_value=10, max_value=100, value=80, step=5) / 100.0
 
-# 동적 투명도가 적용된 RGBA 색상 산출
-red_bg = f"rgba(255, 200, 200, {bg_opacity})"
-blue_bg = f"rgba(200, 220, 255, {bg_opacity})"
+# 기준 원색 색상을 기존보다 2배 이상 진하고 명확한 원색 톤으로 적용
+red_bg = f"rgba(255, 80, 80, {bg_opacity})"
+blue_bg = f"rgba(50, 130, 255, {bg_opacity})"
 
-# 동적 CSS 주입
 st.markdown(f"""
 <style>
-    /* 전체 앱 배경 - 동적 투명도가 적용된 그라데이션 */
+    /* 전체 앱 배경 - 2배 강화된 선명한 레드/블루 그라데이션 */
     .stApp {{
         background: linear-gradient(135deg, {red_bg} 0%, #FFFFFF 50%, {blue_bg} 100%) !important;
     }}
