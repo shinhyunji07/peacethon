@@ -143,17 +143,29 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 카카오톡 스타일 채팅 함수
+# 4. 실시간 카카오톡 스타일 채팅 함수 (0.5초 자동 동기화)
 # ==========================================
 def render_live_chat():
+    # ⚡ 0.5초(500ms)마다 브라우저에서 자동 새로고침을 트리거하는 자바스크립트
+    st.components.v1.html(
+        """
+        <script>
+            setTimeout(function() {
+                window.parent.postMessage({type: 'streamlit:rerun'}, '*');
+            }, 500);
+        </script>
+        """,
+        height=0
+    )
+
     c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
     
     with c_col1:
         st.subheader("💬 실시간 소통 채팅방")
-        st.caption("⚡ 카카오톡 스타일의 좌/우 실시간 채팅창입니다.")
+        st.caption("⚡ 카카오톡 스타일의 실시간 채팅창입니다. (0.5초 자동 반영)")
         
     with c_col2:
-        if st.button("🔄 대화 새로고침", use_container_width=True):
+        if st.button("🔄 수동 새로고침", use_container_width=True):
             st.rerun()
 
     with c_col3:
