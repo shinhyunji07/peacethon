@@ -139,8 +139,12 @@ if "selected_menu" not in st.session_state:
 if "sns_posts" not in st.session_state:
     st.session_state.sns_posts = initial_data.get("sns_posts", [])
 
+# 초기화 확인용 세션 상태
+if "confirm_clear_mode" not in st.session_state:
+    st.session_state.confirm_clear_mode = False
+
 # ==========================================
-# 4. 모달 Dialog 정의 (초기화 및 삭제)
+# 4. 모달 Dialog 정의 (프로필 삭제용)
 # ==========================================
 @st.dialog("⚠️ 프로필 삭제")
 def confirm_delete_profile(profile_idx, profile_name):
@@ -153,22 +157,6 @@ def confirm_delete_profile(profile_idx, profile_name):
             del st.session_state.profiles[profile_idx]
             save_data()
             st.success("프로필이 삭제되었습니다.")
-            st.rerun()
-    with col2:
-        if st.button("취소", use_container_width=True):
-            st.rerun()
-
-@st.dialog("⚠️ 대화방 전체 초기화")
-def confirm_clear_chat():
-    st.write("정말로 대화방의 모든 메시지를 삭제하시겠습니까?")
-    st.caption("이 작업은 되돌릴 수 없으며, 로컬 저장 파일의 대화 내역도 삭제됩니다.")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("네, 모두 삭제합니다", type="primary", use_container_width=True):
-            # 메모리와 파일 데이터 완벽 삭제
-            GLOBAL_CHAT_STORE.clear()
-            save_data()
             st.rerun()
     with col2:
         if st.button("취소", use_container_width=True):
@@ -195,12 +183,29 @@ def render_live_chat():
             st.rerun()
 
     with c_col4:
-        # 메시지가 하나라도 있으면 삭제 버튼 활성화
-        if len(GLOBAL_CHAT_STORE) > 0:
-            if st.button("🗑️ 초기화", use_container_width=True):
-                confirm_clear_chat()
+        # 초기화 버튼 클릭 시 토글 모드 작동
+        if not st.session_state.confirm_clear_mode:
+            if st.button("🗑️ 초기화", use_container_width=True, disabled=len(GLOBAL_CHAT_STORE) == 0):
+                st.session_state.confirm_clear_mode = True
+                st.rerun(scope="fragment")
+        else:
+            if st.button("🚨 정말 초기화?", type="primary", use_container_width=True):
+                GLOBAL_CHAT_STORE.clear()
+                save_data()
+                st.session_state.confirm_clear_mode = False
+                st.rerun(scope="fragment")
 
-    st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
+    # 초기화 확인 모드일 때 경고창 표시 및 취소 버튼
+    if st.session_state.confirm_clear_mode:
+        warn_col1, warn_col2 = st.columns([3, 1])
+        with warn_col1:
+            st.warning("⚠️ 버튼을 한 번 더 누르면 대화 내역이 완전히 삭제됩니다!")
+        with warn_col2:
+            if st.button("취소", use_container_width=True):
+                st.session_state.confirm_clear_mode = False
+                st.rerun(scope="fragment")
+    else:
+        st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
 
     chat_box = st.container(height=420)
     with chat_box:
