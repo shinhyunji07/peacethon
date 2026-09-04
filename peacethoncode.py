@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import os
-import time
 from datetime import datetime
 
 # 데이터 저장 파일 경로 설정
@@ -101,12 +100,9 @@ def confirm_clear_chat():
 # ==========================================
 @st.fragment(run_every=2)
 def render_live_chat():
-    """페이지 전체를 새로고침하지 않고 채팅 영역만 2초 간격으로 로컬 파일과 동기화"""
-    # 파일에서 최신 채팅 내역을 불러와 세션 업데이트
     latest_data = load_data()
     st.session_state.chat_messages = latest_data.get("chat_messages", [])
 
-    # 상단 제어 바 (새로고침, 뒤로가기, 초기화 버튼)
     c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
     
     with c_col1:
@@ -129,7 +125,6 @@ def render_live_chat():
 
     st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
 
-    # 채팅 메시지 출력 박스
     chat_box = st.container(height=420)
     with chat_box:
         if not st.session_state.chat_messages:
@@ -139,7 +134,6 @@ def render_live_chat():
                 st.markdown(f"**{msg['author']}** ({msg['role']})")
                 st.write(msg["content"])
 
-    # 메시지 입력 창
     if prompt := st.chat_input("메시지를 입력하세요..."):
         new_msg = {
             "avatar": st.session_state.avatar_emoji,
@@ -166,8 +160,9 @@ if st.session_state.page_step == "profile":
 
         profile_options = [f"{p['avatar']} {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
         
+        # 1. 기존 프로필 선택 및 비밀번호 인증 섹션
         if profile_options:
-            st.markdown("### 👤 기존 프로필 선택")
+            st.markdown("### 👤 기존 프로필 접속")
             selected_profile_str = st.selectbox(
                 "이미 생성된 프로필 중 선택하세요", 
                 options=profile_options
@@ -176,41 +171,58 @@ if st.session_state.page_step == "profile":
             selected_idx = profile_options.index(selected_profile_str)
             selected_profile = st.session_state.profiles[selected_idx]
 
+            login_pw_input = st.text_input("비밀번호를 입력하세요", type="password", key="login_pw")
+
             btn_col1, btn_col2 = st.columns([2, 1])
             with btn_col1:
                 if st.button("선택한 프로필로 입장하기 ➡️", use_container_width=True, type="primary"):
-                    st.session_state.user_nickname = selected_profile["nickname"]
-                    st.session_state.user_role = selected_profile["role"]
-                    st.session_state.avatar_emoji = selected_profile["avatar"]
-                    st.session_state.page_step = "menu"
-                    st.rerun()
+                    # 기존 프로필에 비밀번호가 없거나(하위 호환) 입력값과 일치하는지 확인
+                    saved_pw = selected_profile.get("password", "")
+                    if saved_pw and login_pw_input != saved_pw:
+                        st.error("비밀번호가 올바르지 않습니다.")
+                    else:
+                        st.session_state.user_nickname = selected_profile["nickname"]
+                        st.session_state.user_role = selected_profile["role"]
+                        st.session_state.avatar_emoji = selected_profile["avatar"]
+                        st.session_state.page_step = "menu"
+                        st.rerun()
 
             with btn_col2:
                 if st.button("🗑️ 프로필 삭제", use_container_width=True):
-                    confirm_delete_profile(selected_idx, selected_profile_str)
+                    saved_pw = selected_profile.get("password", "")
+                    if saved_pw and login_pw_input != saved_pw:
+                        st.error("비밀번호가 올바르지 않아 삭제할 수 없습니다.")
+                    else:
+                        confirm_delete_profile(selected_idx, selected_profile_str)
                 
             st.markdown("<br>", unsafe_allow_html=True)
             st.divider()
 
+        # 2. 새 프로필 생성 섹션 (비밀번호 설정 포함)
         st.markdown("### ✨ 새 프로필 생성")
-        nickname_input = st.text_input("새로 사용할 닉네임을 입력하세요", value="")
+        nickname_input = st.text_input("새로 사용할 닉네임을 입력하세요", value="", key="new_nickname")
+        password_input = st.text_input("비밀번호를 설정하세요", type="password", key="new_pw")
         role_input = st.radio("소속을 선택해주세요", ["🇰🇷 남한 청년", "🇰🇵 북한 청년"], index=0)
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("새 프로필로 생성 및 입장 ➡️", use_container_width=True):
             clean_nickname = nickname_input.strip()
+            clean_pw = password_input.strip()
             
             if not clean_nickname:
                 st.warning("닉네임을 입력해 주세요!")
+            elif not clean_pw:
+                st.warning("비밀번호를 입력해 주세요!")
             else:
                 existing_nicknames = [p["nickname"].lower() for p in st.session_state.profiles]
                 
                 if clean_nickname.lower() in existing_nicknames:
-                    st.error(f"이미 존재하는 닉네임('{clean_nickname}')입니다. 다른 닉네임을 사용하거나 위에서 프로필을 선택해 주세요.")
+                    st.error(f"이미 존재하는 닉네임('{clean_nickname}')입니다. 다른 닉네임을 사용해 주세요.")
                 else:
                     avatar = "🇰🇷" if "남한" in role_input else "🇰🇵"
                     new_profile = {
                         "nickname": clean_nickname,
+                        "password": clean_pw,
                         "role": role_input,
                         "avatar": avatar
                     }
@@ -280,7 +292,7 @@ elif st.session_state.page_step == "main":
 
     st.divider()
 
-    # 1. 채팅창 화면 (Fragment 기반 실시간 채팅 실행)
+    # 1. 채팅창 화면
     if st.session_state.selected_menu == "chat":
         render_live_chat()
 
@@ -313,7 +325,6 @@ elif st.session_state.page_step == "main":
 
         sns_box = st.container(height=450)
         with sns_box:
-            # SNS 목록 최신화
             latest_data = load_data()
             st.session_state.sns_posts = latest_data.get("sns_posts", [])
             
