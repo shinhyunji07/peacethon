@@ -15,7 +15,6 @@ def load_data():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # 하위 호환성을 위해 profiles 키 검사 및 기본값 보장
                 if "profiles" not in data:
                     data["profiles"] = []
                 return data
@@ -62,6 +61,22 @@ if "chat_messages" not in st.session_state:
 if "sns_posts" not in st.session_state:
     st.session_state.sns_posts = initial_data.get("sns_posts", [])
 
+# 대화방 초기화 확인 팝업 Dialog 함수 정의
+@st.dialog("⚠️ 대화방 전체 초기화")
+def confirm_clear_chat():
+    st.write("정말로 대화방의 모든 메시지를 삭제하시겠습니까?")
+    st.caption("이 작업은 되돌릴 수 없으며, 저장된 모든 대화 내역이 로컬 파일에서도 함께 삭제됩니다.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("네, 모두 삭제합니다", type="primary", use_container_width=True):
+            st.session_state.chat_messages = []
+            save_data()
+            st.rerun()
+    with col2:
+        if st.button("취소", use_container_width=True):
+            st.rerun()
+
 # ==========================================
 # STEP 1: 프로필 선택 및 생성 화면
 # ==========================================
@@ -87,7 +102,6 @@ if st.session_state.page_step == "profile":
             )
             
             if st.button("선택한 프로필로 입장하기 ➡️", use_container_width=True, type="primary"):
-                # 선택한 프로필 찾기
                 selected_idx = profile_options.index(selected_profile_str)
                 selected_profile = st.session_state.profiles[selected_idx]
                 
@@ -102,16 +116,8 @@ if st.session_state.page_step == "profile":
 
         # 2. 새 프로필 생성 섹션
         st.markdown("### ✨ 새 프로필 생성")
-        nickname_input = st.text_input(
-            "새로 사용할 닉네임을 입력하세요", 
-            value=""
-        )
-        
-        role_input = st.radio(
-            "소속을 선택해주세요", 
-            ["🇰🇷 남한 청년", "🇰🇵 북한 청년"],
-            index=0
-        )
+        nickname_input = st.text_input("새로 사용할 닉네임을 입력하세요", value="")
+        role_input = st.radio("소속을 선택해주세요", ["🇰🇷 남한 청년", "🇰🇵 북한 청년"], index=0)
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("새 프로필로 생성 및 입장 ➡️", use_container_width=True):
@@ -120,7 +126,6 @@ if st.session_state.page_step == "profile":
             if not clean_nickname:
                 st.warning("닉네임을 입력해 주세요!")
             else:
-                # 닉네임 중복 검사
                 existing_nicknames = [p["nickname"].lower() for p in st.session_state.profiles]
                 
                 if clean_nickname.lower() in existing_nicknames:
@@ -133,7 +138,6 @@ if st.session_state.page_step == "profile":
                         "avatar": avatar
                     }
                     
-                    # 프로필 저장 및 파일 업데이트
                     st.session_state.profiles.append(new_profile)
                     save_data()
                     
@@ -201,8 +205,18 @@ elif st.session_state.page_step == "main":
 
     # 1. 채팅창 화면
     if st.session_state.selected_menu == "chat":
-        st.subheader("💬 실시간 소통 채팅방")
-        st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
+        chat_header_col1, chat_header_col2 = st.columns([3, 1])
+        
+        with chat_header_col1:
+            st.subheader("💬 실시간 소통 채팅방")
+            st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
+            
+        with chat_header_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            # 채팅 메시지가 있을 때만 초기화 버튼 표시
+            if st.session_state.chat_messages:
+                if st.button("🗑️ 대화방 초기화", use_container_width=True):
+                    confirm_clear_chat()
 
         chat_box = st.container(height=450)
         with chat_box:
