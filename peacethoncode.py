@@ -147,13 +147,13 @@ st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout=
 st.sidebar.title("🎨 테마 설정")
 bg_opacity = st.sidebar.slider("배경색 채도/농도 조절 (%)", min_value=10, max_value=100, value=80, step=5) / 100.0
 
-# 기준 원색 색상을 기존보다 2배 이상 진하고 명확한 원색 톤으로 적용
+# 진하고 명확한 원색 톤
 red_bg = f"rgba(255, 80, 80, {bg_opacity})"
 blue_bg = f"rgba(50, 130, 255, {bg_opacity})"
 
 st.markdown(f"""
 <style>
-    /* 전체 앱 배경 - 2배 강화된 선명한 레드/블루 그라데이션 */
+    /* 전체 앱 배경 - 선명한 레드/블루 그라데이션 */
     .stApp {{
         background: linear-gradient(135deg, {red_bg} 0%, #FFFFFF 50%, {blue_bg} 100%) !important;
     }}
@@ -348,9 +348,13 @@ def render_live_chat():
         st.rerun()
 
 # ==========================================
-# STEP 1: 프로필 선택 및 생성 화면
+# STEP 1: 프로필 선택 및 생성 화면 (실시간 반영 보정)
 # ==========================================
 if st.session_state.page_step == "profile":
+    # 실행 시 파일에서 실시간 프로필 목록 불러오기
+    latest_data = load_data()
+    st.session_state.profiles = latest_data.get("profiles", [])
+
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
 
@@ -367,7 +371,8 @@ if st.session_state.page_step == "profile":
             st.markdown("### 👤 기존 프로필 접속")
             selected_profile_str = st.selectbox(
                 "이미 생성된 프로필 중 선택하세요", 
-                options=profile_options
+                options=profile_options,
+                key="profile_select_box"
             )
             
             selected_idx = profile_options.index(selected_profile_str)
@@ -394,7 +399,8 @@ if st.session_state.page_step == "profile":
                     if saved_pw and login_pw_input != saved_pw:
                         st.error("비밀번호가 올바르지 않아 삭제할 수 없습니다.")
                     else:
-                        del st.session_state.profiles[selected_idx]
+                        # 즉각 삭제 및 파일 저장
+                        st.session_state.profiles.pop(selected_idx)
                         save_data()
                         st.success("프로필이 삭제되었습니다.")
                         st.rerun()
@@ -430,6 +436,7 @@ if st.session_state.page_step == "profile":
                         "avatar": avatar
                     }
                     
+                    # 프로필 리스트 추가 및 즉시 데이터 저장
                     st.session_state.profiles.append(new_profile)
                     save_data()
                     
