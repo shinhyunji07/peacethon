@@ -64,7 +64,7 @@ def auto_translate_terms(text, role):
             if south in translated_text:
                 translated_text = translated_text.replace(
                     south, 
-                    f"<b>{north}</b><span style='color:#0066CC; font-size:0.85em;'>(←{south})</span>"
+                    f"<b>{north}</b><span style='color:#0055FF; font-size:0.85em;'>(←{south})</span>"
                 )
     elif "북한" in role:
         sorted_north_dict = sorted(NORTH_TO_SOUTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
@@ -72,7 +72,7 @@ def auto_translate_terms(text, role):
             if north in translated_text:
                 translated_text = translated_text.replace(
                     north, 
-                    f"<b>{south}</b><span style='color:#888; font-size:0.85em;'>(←{north})</span>"
+                    f"<b>{south}</b><span style='color:#D90000; font-size:0.85em;'>(←{north})</span>"
                 )
                 
     return translated_text
@@ -139,94 +139,110 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 4. 페이지 설정 및 UI CSS (채도/디자인 보정 코드 포함)
+# 4. 페이지 기본 설정
 # ==========================================
 st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
 
-st.markdown("""
+# 사이드바에서 배경 투명도(색상 농도) 조절 슬라이더 설정
+st.sidebar.title("🎨 테마 설정")
+bg_opacity = st.sidebar.slider("배경색 농도/투명도 조절", min_value=10, max_value=100, value=80, step=5) / 100.0
+
+# 동적 투명도가 적용된 RGBA 색상 산출
+red_bg = f"rgba(255, 200, 200, {bg_opacity})"
+blue_bg = f"rgba(200, 220, 255, {bg_opacity})"
+
+# 동적 CSS 주입
+st.markdown(f"""
 <style>
-    .logo-text {
+    /* 전체 앱 배경 - 동적 투명도가 적용된 그라데이션 */
+    .stApp {{
+        background: linear-gradient(135deg, {red_bg} 0%, #FFFFFF 50%, {blue_bg} 100%) !important;
+    }}
+
+    .logo-text {{
         font-size: 2.2rem;
         font-weight: 900;
         letter-spacing: -0.5px;
         color: #0F2D59;
         margin-bottom: 0.1rem;
-    }
-    .logo-text-small {
+    }}
+    .logo-text-small {{
         font-size: 1.5rem;
         font-weight: 800;
         letter-spacing: -0.5px;
         color: #0F2D59;
-    }
-    .brand-subtitle {
+    }}
+    .brand-subtitle {{
         font-size: 0.95rem;
-        color: #64748B;
+        color: #475569;
         margin-bottom: 1.5rem;
-    }
+    }}
 
-    .chat-container {
+    .chat-container {{
         display: flex;
         flex-direction: column;
         gap: 12px;
         padding: 10px;
-    }
+    }}
     
-    .message-wrapper {
+    .message-wrapper {{
         display: flex;
         flex-direction: column;
         max-width: 70%;
-    }
+    }}
     
-    .message-info {
+    .message-info {{
         font-size: 12px;
-        color: #555;
+        color: #444;
         margin-bottom: 3px;
         display: flex;
         align-items: center;
         gap: 4px;
-    }
+    }}
     
-    .message-bubble {
+    .message-bubble {{
         padding: 10px 14px;
         border-radius: 15px;
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.04);
-    }
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.06);
+    }}
     
-    /* 선명한 채도 및 색상 구분 설정 */
-    .other-user {
+    /* 상대방 (북한) 말풍선 */
+    .other-user {{
         align-self: flex-start;
-    }
-    .other-user .message-info {
+    }}
+    .other-user .message-info {{
         text-align: left;
         justify-content: flex-start;
-    }
-    .other-user .message-bubble {
-        background-color: #FFF0F0;
-        color: #8A0000;
+    }}
+    .other-user .message-bubble {{
+        background-color: #FFEAEB;
+        color: #900C3F;
         border-top-left-radius: 2px;
-        border: 1px solid #FFC2C2;
-    }
+        border: 1px solid #FFC2C7;
+    }}
 
-    .my-user {
+    /* 나 (남한) 말풍선 */
+    .my-user {{
         align-self: flex-end;
-    }
-    .my-user .message-info {
+    }}
+    .my-user .message-info {{
         text-align: right;
         justify-content: flex-end;
-    }
-    .my-user .message-bubble {
-        background-color: #EBF5FF;
-        color: #003B8E;
+    }}
+    .my-user .message-bubble {{
+        background-color: #E6F0FF;
+        color: #003399;
         border-top-right-radius: 2px;
-        border: 1px solid #B8DCFF;
-    }
+        border: 1px solid #B8D5FF;
+    }}
     
-    div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
+    div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
         border-radius: 10px;
-    }
+        background-color: rgba(255, 255, 255, 0.85) !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -270,7 +286,7 @@ def render_chat_messages():
                 
                 chat_html += (
                     f'<div class="message-wrapper {wrapper_class}">'
-                    f'<div class="message-info">{flag_img} <b>{msg["author"]}</b> <span style="font-size:11px; color:#777;">({msg["role"]})</span></div>'
+                    f'<div class="message-info">{flag_img} <b>{msg["author"]}</b> <span style="font-size:11px; color:#555;">({msg["role"]})</span></div>'
                     f'<div class="message-bubble">{display_content}</div>'
                     f'</div>'
                 )
@@ -486,7 +502,7 @@ elif st.session_state.page_step == "main":
     if st.session_state.selected_menu == "chat":
         render_live_chat()
 
-    # 2. SNS 피드 화면 (게시글 삭제 기능 추가)
+    # 2. SNS 피드 화면
     elif st.session_state.selected_menu == "sns":
         st.subheader("📸 일상 스토리 (SNS)")
 
