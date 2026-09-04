@@ -8,21 +8,18 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 메모리 기반 초고속 글로벌 메시지 버퍼 (실시간 초고속 동기화용)
+# 0. 메모리 기반 초고속 글로벌 메시지 버퍼
 # ==========================================
 @st.cache_resource
 def get_global_chat_store():
-    """서버 메모리에 채팅 내역을 유지하여 파일 I/O 지연 없이 0.1초 내 동기화"""
     return []
 
-# 글로벌 메모리 버퍼 참조
 GLOBAL_CHAT_STORE = get_global_chat_store()
 
 # ==========================================
 # 1. 파일 데이터 로드 및 저장 함수
 # ==========================================
 def load_data():
-    """로컬 JSON 파일에서 프로필, 채팅 및 게시글 데이터 로드"""
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -39,11 +36,10 @@ def load_data():
     return {"profiles": [], "chat_messages": [], "sns_posts": []}
 
 def save_data():
-    """현재 세션 상태의 데이터를 로컬 JSON 파일에 저장"""
     data = {
-        "profiles": st.session_state.profiles,
+        "profiles": st.session_state.get("profiles", []),
         "chat_messages": GLOBAL_CHAT_STORE,
-        "sns_posts": st.session_state.sns_posts
+        "sns_posts": st.session_state.get("sns_posts", [])
     }
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -51,7 +47,6 @@ def save_data():
     except Exception as e:
         st.error(f"데이터 저장 중 오류가 발생했습니다: {e}")
 
-# 최초 실행 시 파일에서 글로벌 채팅 메모리로 데이터 복사
 initial_data = load_data()
 if not GLOBAL_CHAT_STORE and initial_data.get("chat_messages"):
     GLOBAL_CHAT_STORE.extend(initial_data.get("chat_messages"))
@@ -60,7 +55,6 @@ if not GLOBAL_CHAT_STORE and initial_data.get("chat_messages"):
 # 2. 이미지 Base64 변환 유틸리티 함수
 # ==========================================
 def image_to_base64(uploaded_file):
-    """업로드된 이미지 파일을 Base64 문자열로 인코딩"""
     if uploaded_file is not None:
         bytes_data = uploaded_file.getvalue()
         base64_str = base64.b64encode(bytes_data).decode()
@@ -69,11 +63,10 @@ def image_to_base64(uploaded_file):
     return None
 
 # ==========================================
-# 3. 페이지 설정 및 Custom CSS (카카오톡 스타일 버블)
+# 3. 페이지 설정 및 Custom CSS
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
-# 카카오톡 스타일 CSS 주입
 st.markdown("""
 <style>
     .chat-container {
@@ -104,7 +97,6 @@ st.markdown("""
         box-shadow: 0px 1px 2px rgba(0,0,0,0.1);
     }
     
-    /* 상대방 메시지: 왼쪽 정렬 + 파스텔 레드 */
     .other-user {
         align-self: flex-start;
     }
@@ -117,7 +109,6 @@ st.markdown("""
         border-top-left-radius: 2px;
     }
 
-    /* 내 메시지: 오른쪽 정렬 + 파스텔 블루 */
     .my-user {
         align-self: flex-end;
     }
@@ -149,7 +140,7 @@ if "sns_posts" not in st.session_state:
     st.session_state.sns_posts = initial_data.get("sns_posts", [])
 
 # ==========================================
-# 4. 삭제 확인 모달 팝업 Dialog 정의
+# 4. 모달 Dialog 정의 (초기화 및 삭제)
 # ==========================================
 @st.dialog("⚠️ 프로필 삭제")
 def confirm_delete_profile(profile_idx, profile_name):
@@ -170,11 +161,12 @@ def confirm_delete_profile(profile_idx, profile_name):
 @st.dialog("⚠️ 대화방 전체 초기화")
 def confirm_clear_chat():
     st.write("정말로 대화방의 모든 메시지를 삭제하시겠습니까?")
-    st.caption("이 작업은 되돌릴 수 없으며, 저장된 모든 대화 내역이 제거됩니다.")
+    st.caption("이 작업은 되돌릴 수 없으며, 로컬 저장 파일의 대화 내역도 삭제됩니다.")
     
     col1, col2 = st.columns(2)
     with col1:
         if st.button("네, 모두 삭제합니다", type="primary", use_container_width=True):
+            # 메모리와 파일 데이터 완벽 삭제
             GLOBAL_CHAT_STORE.clear()
             save_data()
             st.rerun()
@@ -183,7 +175,7 @@ def confirm_clear_chat():
             st.rerun()
 
 # ==========================================
-# 5. 실시간 카카오톡 스타일 채팅 Fragment (0.5초 자동 감지)
+# 5. 실시간 카카오톡 스타일 채팅 Fragment (0.5초 감지)
 # ==========================================
 @st.fragment(run_every=0.5)
 def render_live_chat():
@@ -203,13 +195,13 @@ def render_live_chat():
             st.rerun()
 
     with c_col4:
-        if GLOBAL_CHAT_STORE:
+        # 메시지가 하나라도 있으면 삭제 버튼 활성화
+        if len(GLOBAL_CHAT_STORE) > 0:
             if st.button("🗑️ 초기화", use_container_width=True):
                 confirm_clear_chat()
 
     st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
 
-    # 카카오톡 스타일 채팅 박스
     chat_box = st.container(height=420)
     with chat_box:
         if not GLOBAL_CHAT_STORE:
@@ -217,7 +209,6 @@ def render_live_chat():
         else:
             current_user = st.session_state.user_nickname
             
-            # 전체 대화 내역을 하나의 HTML 문자열로 조합
             chat_html = '<div class="chat-container">'
             for msg in GLOBAL_CHAT_STORE:
                 is_me = (msg["author"] == current_user)
@@ -230,8 +221,6 @@ def render_live_chat():
                 </div>
                 '''
             chat_html += '</div>'
-            
-            # HTML을 브라우저에 정상 해석하도록 출력
             st.markdown(chat_html, unsafe_allow_html=True)
 
     if prompt := st.chat_input("메시지를 입력하세요..."):
