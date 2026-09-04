@@ -8,8 +8,9 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 북한 용어 -> 남한 용어 자동 변환 사전
+# 0. 남북한 용어 양방향 자동 변환 사전
 # ==========================================
+# 1) 북한 용어 -> 남한 용어 사전
 NORTH_TO_SOUTH_DICT = {
     "곽밥": "도시락",
     "살결물": "스킨/로션",
@@ -29,15 +30,55 @@ NORTH_TO_SOUTH_DICT = {
     "위생종이": "휴지"
 }
 
-def auto_translate_north_terms(text, role):
-    """북한 청년이 작성한 글인 경우 용어를 남한 표준어로 자동 변환합니다."""
-    if "북한" not in role or not text:
+# 2) 남한 용어 -> 북한 용어 사전 (대표 어휘)
+SOUTH_TO_NORTH_DICT = {
+    "도시락": "곽밥",
+    "스킨": "살결물",
+    "로션": "살결물",
+    "휴대전화": "손전화",
+    "핸드폰": "손전화",
+    "도넛": "가락지빵",
+    "아이스크림": "얼음보숭이",
+    "괜찮습니다": "일없습니다",
+    "괜찮아": "일없다",
+    "공원": "문화휴식터",
+    "축구": "볼차기",
+    "히터": "단불",
+    "난방": "단불",
+    "볶음밥": "기름밥",
+    "노크": "손기척",
+    "밥솥": "밥가마",
+    "휴지": "위생종이",
+    "스마트폰": "지능형 손전화",
+    "다이어트": "살찌기막기",
+    "뮤지컬": "가극"
+}
+
+def auto_translate_terms(text, role):
+    """작성자 소속에 따라 상대방 언어 용어로 자동 변환(병기)합니다."""
+    if not text:
         return text
     
     translated_text = text
-    for north, south in NORTH_TO_SOUTH_DICT.items():
-        if north in translated_text:
-            translated_text = translated_text.replace(north, f"<b>{south}</b><span style='color:#888; font-size:0.85em;'>(←{north})</span>")
+    
+    # 북한 청년이 작성한 경우 -> 남한 용어로 변환 표기
+    if "북한" in role:
+        for north, south in NORTH_TO_SOUTH_DICT.items():
+            if north in translated_text:
+                translated_text = translated_text.replace(
+                    north, 
+                    f"<b>{south}</b><span style='color:#888; font-size:0.85em;'>(←{north})</span>"
+                )
+    
+    # 남한 청년이 작성한 경우 -> 북한 용어로 변환 표기
+    elif "남한" in role:
+        for south, north in SOUTH_TO_NORTH_DICT.items():
+            if south in translated_text:
+                translated_text = translated_text.replace(
+                    south, 
+                    f"<b>{south}</b><span style='color:#0066CC; font-size:0.85em;'>(북한말: {north})</span>"
+                )
+                
     return translated_text
 
 # ==========================================
@@ -228,8 +269,8 @@ def render_chat_messages():
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                # 북한 용어 자동 변환 처리 적용
-                display_content = auto_translate_north_terms(msg["content"], msg.get("role", ""))
+                # 양방향 용어 자동 변환 적용
+                display_content = auto_translate_terms(msg["content"], msg.get("role", ""))
                 
                 chat_html += (
                     f'<div class="message-wrapper {wrapper_class}">'
@@ -280,7 +321,7 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        st.info("💡 **자동 변환 안내**: 북한 청년 프로필로 생소한 어휘(예: 곽밥, 손전화 등)를 입력하면 남한 표준어로 자동 변환되어 표기됩니다.")
+        st.info("💡 **양방향 언어 자동 변환 안내**: 대표적인 남북한 언어(예: 도시락↔곽밥, 아이스크림↔얼음보숭이) 작성 시 상대방 용어가 자동으로 함께 표기됩니다.")
 
     render_chat_messages()
 
@@ -499,8 +540,8 @@ elif st.session_state.page_step == "main":
                     st.image(post["image"], use_container_width=True)
 
                 if post.get("content"):
-                    # 피드 내용에도 북한 용어 자동 변환 처리 적용
-                    translated_post_content = auto_translate_north_terms(post["content"], post.get("role", ""))
+                    # 피드 내용에도 양방향 용어 자동 변환 처리 적용
+                    translated_post_content = auto_translate_terms(post["content"], post.get("role", ""))
                     st.markdown(translated_post_content, unsafe_allow_html=True)
 
                 like_count = len(post["likes"])
@@ -521,8 +562,8 @@ elif st.session_state.page_step == "main":
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
                     for c in post["comments"]:
                         c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
-                        # 댓글에도 자동 변환 처리 적용
-                        translated_comment = auto_translate_north_terms(c['content'], c.get('role', ''))
+                        # 댓글에도 양방향 자동 변환 처리 적용
+                        translated_comment = auto_translate_terms(c['content'], c.get('role', ''))
                         st.markdown(f"**{c_flag} {c['author']}**: {translated_comment} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
                     with st.form(key=f"comment_form_{post.get('id', idx)}"):
