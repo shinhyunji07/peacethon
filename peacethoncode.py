@@ -348,10 +348,9 @@ def render_live_chat():
         st.rerun()
 
 # ==========================================
-# STEP 1: 프로필 선택 및 생성 화면 (실시간 반영 보정)
+# STEP 1: 프로필 선택 및 생성 화면
 # ==========================================
 if st.session_state.page_step == "profile":
-    # 실행 시 파일에서 실시간 프로필 목록 불러오기
     latest_data = load_data()
     st.session_state.profiles = latest_data.get("profiles", [])
 
@@ -399,7 +398,6 @@ if st.session_state.page_step == "profile":
                     if saved_pw and login_pw_input != saved_pw:
                         st.error("비밀번호가 올바르지 않아 삭제할 수 없습니다.")
                     else:
-                        # 즉각 삭제 및 파일 저장
                         st.session_state.profiles.pop(selected_idx)
                         save_data()
                         st.success("프로필이 삭제되었습니다.")
@@ -436,7 +434,6 @@ if st.session_state.page_step == "profile":
                         "avatar": avatar
                     }
                     
-                    # 프로필 리스트 추가 및 즉시 데이터 저장
                     st.session_state.profiles.append(new_profile)
                     save_data()
                     
@@ -553,7 +550,6 @@ elif st.session_state.page_step == "main":
 
                 post_flag = get_flag_badge(post.get("role", ""))
                 
-                # 작성자 본인의 글인 경우 삭제 버튼 노출
                 p_col1, p_col2 = st.columns([5, 1])
                 with p_col1:
                     st.markdown(f"#### {post_flag} **{post['author']}** <span style='font-size:12px; color:gray;'>({post['role']} · {post['time']})</span>", unsafe_allow_html=True)
