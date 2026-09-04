@@ -262,7 +262,7 @@ if st.session_state.page_step == "profile":
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-        st.markdown('<div class="brand-title">🕊️ 민주평통 잇다 <span style="font-size:18px; color:#64748B;">(IT-DA)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="brand-title">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
         st.markdown('<div class="brand-subtitle">남북 청년의 마음과 내일을 이어가는 소통 플랫폼</div>', unsafe_allow_html=True)
         
         st.subheader("프로필을 선택하거나 생성해주세요")
@@ -355,7 +355,7 @@ elif st.session_state.page_step == "menu":
 
     with col2:
         flag_img = get_flag_badge(st.session_state.user_role)
-        st.markdown('<div class="brand-title">🕊️ 민주평통 잇다 <span style="font-size:18px; color:#64748B;">(IT-DA)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="brand-title">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
         st.markdown(f"### 반갑습니다, {flag_img} **{st.session_state.user_nickname}**님!", unsafe_allow_html=True)
         st.write("원하시는 활동을 선택해주세요.")
         st.divider()
@@ -387,7 +387,7 @@ elif st.session_state.page_step == "main":
     
     flag_img = get_flag_badge(st.session_state.user_role)
     with nav_col1:
-        st.markdown('<h3 style="margin:0; padding:0;">🕊️ 민주평통 잇다 <span style="font-size:14px; color:#64748B;">(IT-DA)</span></h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="margin:0; padding:0;">🕊️ PUAC IT-DA(잇다)</h3>', unsafe_allow_html=True)
         st.markdown(f"접속 프로필: {flag_img} **{st.session_state.user_nickname}** ({st.session_state.user_role})", unsafe_allow_html=True)
     
     with nav_col2:
