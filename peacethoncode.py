@@ -71,7 +71,7 @@ def get_flag_badge(role):
 # ==========================================
 # 4. 페이지 설정 및 UI CSS
 # ==========================================
-st.set_page_config(page_title="민주평통 잇다 (IT-DA)", page_icon="🕊️", layout="wide")
+st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
 
 st.markdown("""
 <style>
