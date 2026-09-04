@@ -52,7 +52,7 @@ if not GLOBAL_CHAT_STORE and initial_data.get("chat_messages"):
     GLOBAL_CHAT_STORE.extend(initial_data.get("chat_messages"))
 
 # ==========================================
-# 2. 이미지 Base64 변환 유틸리티 함수
+# 2. 이미지 Base64 및 뱃지 유틸리티 함수
 # ==========================================
 def image_to_base64(uploaded_file):
     if uploaded_file is not None:
@@ -62,7 +62,6 @@ def image_to_base64(uploaded_file):
         return f"data:{mime_type};base64,{base64_str}"
     return None
 
-# PC 호환 국기 SVG 태그 생성 함수
 def get_flag_badge(role):
     if "남한" in role:
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f7.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
@@ -70,12 +69,18 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 3. 페이지 설정 및 Custom CSS
+# 3. 페이지 설정 및 태극 테마 Custom CSS
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
 st.markdown("""
 <style>
+    /* 태극 은은한 소프트 그라데이션 배경 */
+    .stApp {
+        background: linear-gradient(145deg, #FFF5F5 0%, #FFFFFF 50%, #F0F7FF 100%) !important;
+    }
+    
+    /* 채팅 컨테이너 */
     .chat-container {
         display: flex;
         flex-direction: column;
@@ -104,7 +109,7 @@ st.markdown("""
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
-        box-shadow: 0px 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
     
     .other-user {
@@ -115,9 +120,10 @@ st.markdown("""
         justify-content: flex-start;
     }
     .other-user .message-bubble {
-        background-color: #FFECEC;
-        color: #5C1D1D;
+        background-color: #FFEBEB;
+        color: #611313;
         border-top-left-radius: 2px;
+        border: 1px solid #FFD6D6;
     }
 
     .my-user {
@@ -128,9 +134,16 @@ st.markdown("""
         justify-content: flex-end;
     }
     .my-user .message-bubble {
-        background-color: #E8F2FF;
-        color: #1A365D;
+        background-color: #EBF4FF;
+        color: #0F2D59;
         border-top-right-radius: 2px;
+        border: 1px solid #D6E8FF;
+    }
+    
+    /* 카드 및 박스 배경 투명도 조정 */
+    div[data-testid="stExpander"], div[data-testid="stForm"] {
+        background-color: rgba(255, 255, 255, 0.85) !important;
+        border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
