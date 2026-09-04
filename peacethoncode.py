@@ -69,82 +69,93 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 3. 페이지 설정 및 태극 테마 Custom CSS
+# 3. 페이지 설정 및 사이드바 (투명도 조절)
 # ==========================================
 st.set_page_config(page_title="통일 톡톡 (Tongil Talk)", page_icon="🕊️", layout="wide")
 
-st.markdown("""
+# 사이드바 UI 설정
+with st.sidebar:
+    st.header("🎨 화면 테마 설정")
+    bg_opacity = st.slider("배경색 농도 (투명도)", min_value=0, max_value=100, value=60, step=5)
+    
+# 슬라이더 값을 RGBA 알파값(0.0 ~ 1.0)으로 변환
+alpha = bg_opacity / 100.0
+
+st.markdown(f"""
 <style>
-    /* 태극 은은한 소프트 그라데이션 배경 */
-    .stApp {
-        background: linear-gradient(145deg, #FFF5F5 0%, #FFFFFF 50%, #F0F7FF 100%) !important;
-    }
+    /* 태극 동적 투명도 그라데이션 배경 */
+    .stApp {{
+        background: linear-gradient(145deg, 
+            rgba(255, 235, 235, {alpha}) 0%, 
+            rgba(255, 255, 255, {alpha}) 50%, 
+            rgba(230, 242, 255, {alpha}) 100%) !important;
+    }}
     
     /* 채팅 컨테이너 */
-    .chat-container {
+    .chat-container {{
         display: flex;
         flex-direction: column;
         gap: 12px;
         padding: 10px;
-    }
+    }}
     
-    .message-wrapper {
+    .message-wrapper {{
         display: flex;
         flex-direction: column;
         max-width: 70%;
-    }
+    }}
     
-    .message-info {
+    .message-info {{
         font-size: 12px;
         color: #555;
         margin-bottom: 3px;
         display: flex;
         align-items: center;
         gap: 4px;
-    }
+    }}
     
-    .message-bubble {
+    .message-bubble {{
         padding: 10px 14px;
         border-radius: 15px;
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-    }
+    }}
     
-    .other-user {
+    .other-user {{
         align-self: flex-start;
-    }
-    .other-user .message-info {
+    }}
+    .other-user .message-info {{
         text-align: left;
         justify-content: flex-start;
-    }
-    .other-user .message-bubble {
-        background-color: #FFEBEB;
+    }}
+    .other-user .message-bubble {{
+        background-color: rgba(255, 235, 235, 0.95);
         color: #611313;
         border-top-left-radius: 2px;
         border: 1px solid #FFD6D6;
-    }
+    }}
 
-    .my-user {
+    .my-user {{
         align-self: flex-end;
-    }
-    .my-user .message-info {
+    }}
+    .my-user .message-info {{
         text-align: right;
         justify-content: flex-end;
-    }
-    .my-user .message-bubble {
-        background-color: #EBF4FF;
+    }}
+    .my-user .message-bubble {{
+        background-color: rgba(235, 244, 255, 0.95);
         color: #0F2D59;
         border-top-right-radius: 2px;
         border: 1px solid #D6E8FF;
-    }
+    }}
     
-    /* 카드 및 박스 배경 투명도 조정 */
-    div[data-testid="stExpander"], div[data-testid="stForm"] {
+    /* 카드 및 박스 배경 투명도 */
+    div[data-testid="stExpander"], div[data-testid="stForm"] {{
         background-color: rgba(255, 255, 255, 0.85) !important;
         border-radius: 10px;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
