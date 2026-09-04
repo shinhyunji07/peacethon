@@ -8,79 +8,63 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 남북한 용어 양방향 자동 번역 사전
+# 0. 남북한 용어 통합 단어 사전
+# (새 단어 추가 시 [남한어, 북한어] 쌍으로 등록하면 완료됩니다.)
 # ==========================================
-NORTH_TO_SOUTH_DICT = {
-    "곽밥": "도시락",
-    "살결물": "스킨/로션",
-    "손전화": "휴대전화",
-    "가락지빵": "도넛",
-    "얼음보숭이": "아이스크림",
-    "일없습니다": "괜찮습니다",
-    "일없다": "괜찮다",
-    "문화휴식터": "공원",
-    "볼차기": "축구",
-    "단불": "난방",
-    "기름밥": "볶음밥",
-    "손기척": "노크",
-    "밥가마": "밥솥",
-    "속도전가루": "미숫가루",
-    "위생종이": "휴지"
-}
-
-SOUTH_TO_NORTH_DICT = {
-    "아이스크림": "얼음보숭이",
-    "스마트폰": "지능형 손전화",
-    "휴대전화": "손전화",
-    "핸드폰": "손전화",
-    "도시락": "곽밥",
-    "괜찮습니다": "일없습니다",
-    "괜찮아": "일없다",
-    "다이어트": "살찌기막기",
-    "뮤지컬": "가극",
-    "스킨": "살결물",
-    "로션": "살결물",
-    "도넛": "가락지빵",
-    "공원": "문화휴식터",
-    "축구": "볼차기",
-    "히터": "단불",
-    "난방": "단불",
-    "볶음밥": "기름밥",
-    "노크": "손기척",
-    "밥솥": "밥가마",
-    "휴지": "위생종이"
-}
+INTEGRATED_DICTIONARY = [
+    # ("남한어", "북한어")
+    ("도시락", "곽밥"),
+    ("스킨", "살결물"),
+    ("로션", "살결물"),
+    ("휴대전화", "손전화"),
+    ("스마트폰", "지능형 손전화"),
+    ("핸드폰", "손전화"),
+    ("도넛", "가락지빵"),
+    ("아이스크림", "얼음보숭이"),
+    ("괜찮습니다", "일없습니다"),
+    ("괜찮다", "일없다"),
+    ("공원", "문화휴식터"),
+    ("축구", "볼차기"),
+    ("난방", "단불"),
+    ("히터", "단불"),
+    ("볶음밥", "기름밥"),
+    ("노크", "손기척"),
+    ("밥솥", "밥가마"),
+    ("미숫가루", "속도전가루"),
+    ("휴지", "위생종이"),
+    ("다이어트", "살찌기막기"),
+    ("뮤지컬", "가극")
+]
 
 def auto_translate_terms(text, viewer_role):
     """
-    작성자 주체와 관계없이, 현재 접속해 있는 사용자(viewer_role)의 언어 환경에 맞게
-    사전 단어를 자동으로 번역하여 보여줍니다.
+    접속자 프로필(viewer_role)에 맞춰 사전에 등록된 단어를 표시하고,
+    바뀌기 전 원문을 괄호 안에 병기합니다.
     """
     if not text:
         return text
     
     translated_text = str(text)
-    
-    # [1] 현재 접속자가 '남한 청년'인 경우 -> 텍스트 내의 '북한 단어'를 '남한 단어'로 번역해서 보여줌
+
+    # 1. 접속자가 '남한 청년' 프로필인 경우
+    # -> 북한 단어를 남한어로 바꾸고 원래 적힌 북한 단어를 병기
     if "남한" in viewer_role:
-        sorted_north_dict = sorted(NORTH_TO_SOUTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
-        for north, south in sorted_north_dict:
-            if north in translated_text:
-                translated_text = translated_text.replace(
-                    north, 
-                    f"<b>{south}</b><span style='color:#0055FF; font-size:0.85em;'>(←{north})</span>"
-                )
-                
-    # [2] 현재 접속자가 '북한 청년'인 경우 -> 텍스트 내의 '남한 단어'를 '북한 단어'로 번역해서 보여줌
+        # 긴 단어부터 정렬하여 치환 오류 방지
+        sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[1]), reverse=True)
+        for south_term, north_term in sorted_dict:
+            if north_term in translated_text:
+                replacement = f"<b>{south_term}</b><span style='color:#0055FF; font-size:0.85em;'>(←{north_term})</span>"
+                translated_text = translated_text.replace(north_term, replacement)
+
+    # 2. 접속자가 '북한 청년' 프로필인 경우
+    # -> 남한 단어를 북한어로 바꾸고 원래 적힌 남한 단어를 병기
     elif "북한" in viewer_role:
-        sorted_south_dict = sorted(SOUTH_TO_NORTH_DICT.items(), key=lambda x: len(x[0]), reverse=True)
-        for south, north in sorted_south_dict:
-            if south in translated_text:
-                translated_text = translated_text.replace(
-                    south, 
-                    f"<b>{north}</b><span style='color:#D90000; font-size:0.85em;'>(←{south})</span>"
-                )
-                
+        sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[0]), reverse=True)
+        for south_term, north_term in sorted_dict:
+            if south_term in translated_text:
+                replacement = f"<b>{north_term}</b><span style='color:#D90000; font-size:0.85em;'>(←{south_term})</span>"
+                translated_text = translated_text.replace(south_term, replacement)
+
     return translated_text
 
 # ==========================================
@@ -145,21 +129,18 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 4. 페이지 기본 설정 및 진해진 색상 반영
+# 4. 페이지 기본 설정 및 스타일 반영
 # ==========================================
 st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
 
-# 사이드바에서 배경 투명도/채도 농도 조절 슬라이더
 st.sidebar.title("🎨 테마 설정")
 bg_opacity = st.sidebar.slider("배경색 채도/농도 조절 (%)", min_value=10, max_value=100, value=80, step=5) / 100.0
 
-# 진하고 명확한 원색 톤
 red_bg = f"rgba(255, 80, 80, {bg_opacity})"
 blue_bg = f"rgba(50, 130, 255, {bg_opacity})"
 
 st.markdown(f"""
 <style>
-    /* 전체 앱 배경 - 선명한 레드/블루 그라데이션 */
     .stApp {{
         background: linear-gradient(135deg, {red_bg} 0%, #FFFFFF 50%, {blue_bg} 100%) !important;
     }}
@@ -214,7 +195,6 @@ st.markdown(f"""
         box-shadow: 0px 2px 6px rgba(0,0,0,0.06);
     }}
     
-    /* 상대방 말풍선 */
     .other-user {{
         align-self: flex-start;
     }}
@@ -229,7 +209,6 @@ st.markdown(f"""
         border: 1px solid #FFC2C7;
     }}
 
-    /* 나 말풍선 */
     .my-user {{
         align-self: flex-end;
     }}
@@ -263,10 +242,8 @@ if "avatar_emoji" not in st.session_state:
     st.session_state.avatar_emoji = "🇰🇷"
 if "selected_menu" not in st.session_state:
     st.session_state.selected_menu = "chat"
-
 if "sns_posts" not in st.session_state:
     st.session_state.sns_posts = initial_data.get("sns_posts", [])
-
 if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
@@ -281,14 +258,14 @@ def render_chat_messages():
             st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
         else:
             current_user = st.session_state.user_nickname
-            current_role = st.session_state.user_role  # 접속자 역할
+            current_role = st.session_state.user_role
             chat_html = '<div class="chat-container">'
             for msg in GLOBAL_CHAT_STORE:
                 is_me = (msg["author"] == current_user)
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                # 작성 주체 상관없이 '접속한 내 소속(current_role)' 기준 자동 변환
+                # 접속자 국적 언어 기준 자동 치환 및 병기
                 display_content = auto_translate_terms(msg["content"], current_role)
                 
                 chat_html += (
@@ -340,7 +317,7 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        st.info("💡 **접속 국가 맞춤 자동 번역 안내**: 작성한 주체와 관계없이, 접속한 프로필의 언어 환경에 맞는 상대 국가 용어가 내 언어로 자동 실시간 번역됩니다.")
+        st.info("💡 **통합 사전 실시간 반영**: 작성자 국적과 무관하게, 현재 로그인한 국적의 언어로 사전 단어가 표기되며 원문이 병기됩니다.")
 
     render_chat_messages()
 
@@ -549,7 +526,7 @@ elif st.session_state.page_step == "main":
             st.info("아직 등록된 피드가 없습니다. 첫 사진의 주인공이 되어보세요!")
         else:
             current_user = st.session_state.user_nickname
-            current_role = st.session_state.user_role  # 접속자 역할
+            current_role = st.session_state.user_role
 
             for idx, post in enumerate(st.session_state.sns_posts):
                 if "likes" not in post:
@@ -574,7 +551,6 @@ elif st.session_state.page_step == "main":
                     st.image(post["image"], use_container_width=True)
 
                 if post.get("content"):
-                    # 접속자 환경(current_role) 기준으로 SNS 게시글 내용 자동 번역
                     translated_post_content = auto_translate_terms(post["content"], current_role)
                     st.markdown(translated_post_content, unsafe_allow_html=True)
 
@@ -596,7 +572,6 @@ elif st.session_state.page_step == "main":
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
                     for c_idx, c in enumerate(post["comments"]):
                         c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
-                        # 접속자 환경(current_role) 기준으로 댓글 자동 번역
                         translated_comment = auto_translate_terms(c['content'], current_role)
                         st.markdown(f"**{c_flag} {c['author']}**: {translated_comment} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
