@@ -36,49 +36,49 @@ INTEGRATED_DICTIONARY = [
     ("뮤지컬", "가극")
 ]
 
-def auto_translate_terms(text, viewer_role):
+def auto_translate_terms(text, viewer_role, author_role):
     """
-    접속자 프로필(viewer_role)에 맞춰 사전에 등록된 단어를 표시하고,
-    바뀌기 전 원문을 괄호 안에 병기합니다.
+    작성자(author_role)와 보는 사람(viewer_role)의 관계에 맞춰
+    1) 상대방 글일 때: 나의 국적 언어로 변환 및 원문 병기
+    2) 내가 쓴 글일 때: 내 언어 유지 + 상대방 국적 언어로 변환될 단어를 괄호 표기
     """
     if not text:
         return text
     
     translated_text = str(text)
+    is_me = (viewer_role == author_role)
 
-    # 1. 접속자가 '남한 청년' 프로필인 경우
-    # -> 북한 단어를 남한어로 바꾸고 원래 적힌 북한 단어를 병기
+    # 1. 보는 사람이 '남한 청년' 프로필인 경우
     if "남한" in viewer_role:
-        sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[1]), reverse=True)
-        for south_term, north_term in sorted_dict:
-            if north_term in translated_text:
-                replacement = f"<b>{south_term}</b><span style='color:#0055FF; font-size:0.85em;'>(←{north_term})</span>"
-                translated_text = translated_text.replace(north_term, replacement)
+        if not is_me: # 상대방(북한 유저)이 작성한 글을 내가 볼 때
+            sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[1]), reverse=True)
+            for south_term, north_term in sorted_dict:
+                if north_term in translated_text:
+                    replacement = f"<b>{south_term}</b><span style='color:#0055FF; font-size:0.85em;'>(←{north_term})</span>"
+                    translated_text = translated_text.replace(north_term, replacement)
+        else: # 내가(남한 유저) 작성한 글을 내 화면에서 볼 때 (상대방에게 변환될 단어 표시)
+            sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[0]), reverse=True)
+            for south_term, north_term in sorted_dict:
+                if south_term in translated_text:
+                    replacement = f"<b>{south_term}</b><span style='color:#D90000; font-size:0.85em;'>(→북한어: {north_term})</span>"
+                    translated_text = translated_text.replace(south_term, replacement)
 
-    # 2. 접속자가 '북한 청년' 프로필인 경우
-    # -> 남한 단어를 북한어로 바꾸고 원래 적힌 남한 단어를 병기
+    # 2. 보는 사람이 '북한 청년' 프로필인 경우
     elif "북한" in viewer_role:
-        sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[0]), reverse=True)
-        for south_term, north_term in sorted_dict:
-            if south_term in translated_text:
-                replacement = f"<b>{north_term}</b><span style='color:#D90000; font-size:0.85em;'>(←{south_term})</span>"
-                translated_text = translated_text.replace(south_term, replacement)
+        if not is_me: # 상대방(남한 유저)이 작성한 글을 내가 볼 때
+            sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[0]), reverse=True)
+            for south_term, north_term in sorted_dict:
+                if south_term in translated_text:
+                    replacement = f"<b>{north_term}</b><span style='color:#D90000; font-size:0.85em;'>(←{south_term})</span>"
+                    translated_text = translated_text.replace(south_term, replacement)
+        else: # 내가(북한 유저) 작성한 글을 내 화면에서 볼 때 (상대방에게 변환될 단어 표시)
+            sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[1]), reverse=True)
+            for south_term, north_term in sorted_dict:
+                if north_term in translated_text:
+                    replacement = f"<b>{north_term}</b><span style='color:#0055FF; font-size:0.85em;'>(→남한어: {south_term})</span>"
+                    translated_text = translated_text.replace(north_term, replacement)
 
     return translated_text
-
-def preview_opponent_translation(text, my_role):
-    """
-    내가 작성한 단어가 '상대방 국적' 사용자에게 어떻게 변환되어 보일지 안내하는 헬퍼 함수
-    """
-    if not text:
-        return ""
-    
-    opponent_role = "🇰🇵 북한 청년" if "남한" in my_role else "🇰🇷 남한 청년"
-    translated = auto_translate_terms(text, opponent_role)
-    
-    if translated != text:
-        return f"💡 **상대방 화면 표기 예시**: {translated}"
-    return ""
 
 # ==========================================
 # 1. 메모리 기반 초고속 글로벌 메시지 버퍼
@@ -278,8 +278,12 @@ def render_chat_messages():
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                # 접속자의 언어 국적 기준 자동 변환 및 원문 병기
-                display_content = auto_translate_terms(msg["content"], current_role)
+                # 작성자와 관람자의 관계에 맞는 변환어 표기 적용
+                display_content = auto_translate_terms(
+                    text=msg["content"], 
+                    viewer_role=current_role, 
+                    author_role=msg.get("role", "")
+                )
                 
                 chat_html += (
                     f'<div class="message-wrapper {wrapper_class}">'
@@ -330,8 +334,7 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        opponent_label = "북한 청년" if "남한" in st.session_state.user_role else "남한 청년"
-        st.info(f"💡 **상호 단어 변환 안내**: 사전에 등록된 용어를 입력하면, 상대방({opponent_label})의 화면에는 해당 국적 언어로 자동 치환되어 전달됩니다.")
+        st.info("💡 **양방향 단어 안내 시스템**: 내가 전송한 메시지 속 사전 등록 단어는 내 화면에서 `(→상대방어: 단어)` 형태로 어떤 단어로 변환되어 가는지 바로 안내됩니다.")
 
     render_chat_messages()
 
@@ -510,12 +513,6 @@ elif st.session_state.page_step == "main":
 
         with st.expander("✨ 새 피드 작성하기 (사진 첨부)", expanded=False):
             post_content = st.text_area("내용을 입력해주세요", height=90, key="post_content_input")
-            
-            # 작성 중 상대방에게 변환되어 보일 문구 실시간 미리보기
-            preview_msg = preview_opponent_translation(post_content, st.session_state.user_role)
-            if preview_msg:
-                st.caption(preview_msg)
-
             uploaded_img = st.file_uploader("사진을 올려보세요 (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
 
             if st.button("게시하기 🚀", type="primary"):
@@ -571,7 +568,11 @@ elif st.session_state.page_step == "main":
                     st.image(post["image"], use_container_width=True)
 
                 if post.get("content"):
-                    translated_post_content = auto_translate_terms(post["content"], current_role)
+                    translated_post_content = auto_translate_terms(
+                        text=post["content"], 
+                        viewer_role=current_role, 
+                        author_role=post.get("role", "")
+                    )
                     st.markdown(translated_post_content, unsafe_allow_html=True)
 
                 like_count = len(post["likes"])
@@ -592,7 +593,11 @@ elif st.session_state.page_step == "main":
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
                     for c_idx, c in enumerate(post["comments"]):
                         c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
-                        translated_comment = auto_translate_terms(c['content'], current_role)
+                        translated_comment = auto_translate_terms(
+                            text=c['content'], 
+                            viewer_role=current_role, 
+                            author_role=c.get("role", "")
+                        )
                         st.markdown(f"**{c_flag} {c['author']}**: {translated_comment} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
                     with st.form(key=f"comment_form_{post.get('id', idx)}"):
