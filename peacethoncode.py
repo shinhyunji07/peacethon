@@ -8,23 +8,6 @@ from datetime import datetime
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
-# 0. 민주평화통일자문회의 로고 (SVG Vector Base64)
-# ==========================================
-PUAC_LOGO_SVG = (
-    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDA1MDAi"
-    "Pg0KICA8Y2lyY2xlIGN4PSIyNTAiIGN5PSIyNTAiIHI9IjI0MCIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tl"
-    "PSIjRDRENEI5IiBzdHJva2Utd2lkdGg9IjEwIi8+DQogIDxjaXJjbGUgY3g9IjI1MCIgY3k9IjI1MCIg"
-    "cj0iMTgwIiBmaWxsPSJub25lIiBzdHJva2U9IiNENEQ0QjkiIHN0cm9rZS13aWR0aD0iNCIvPg0KICA8"
-    "ZyBmaWxsPSIjRDRENEI5Ij4NCiAgICA8cGF0aCBkPSJNMjUwIDYwQzIwMCA2MCAxOTAgMTIwIDI1MCAx"
-    "NTBDMzAwIDEyMCAyOTAgNjAgMjUwIDYwWiIvPg0KICAgIDxwYXRoIGQ9Ik0yNTAgNDQwQzIwMCA0NDAg"
-    "MTkwIDM4MCAyNTAgMzUwQzMwMCAzODAgMjkwIDQ0MCAyNTAgNDQwWiIvPg0KICAgIDxwYXRoIGQ9Ik02"
-    "MCAyNTBDNjAgMjAwIDEyMCAxOTAgMTUwIDI1MEMxMjAgMzAwIDYwIDI5MCA2MCAyNTBaIi8+DQogICAg"
-    "PHBhdGggZD0iTTQ0MCAyNTBDNDQwIDIwMCAzODAgMTkwIDM1MCAyNTBDMzgwIDMwMCA0NDAgMjkwIDQ0"
-    "MCAyNTBaIi8+DQogICAgPGNpcmNsZSBjeD0iMjUwIiBjeT0iMjUwIiByPSI1MCIgZmlsbD0iI0Q0RDRC"
-    "OSIvPg0KICA8L2c+DQo8L3N2Zz4="
-)
-
-# ==========================================
 # 1. 메모리 기반 초고속 글로벌 메시지 버퍼
 # ==========================================
 @st.cache_resource
@@ -86,129 +69,88 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 4. 페이지 설정 및 배경 레이어 CSS
+# 4. 페이지 설정 및 UI CSS
 # ==========================================
 st.set_page_config(page_title="민주평통 잇다 (IT-DA)", page_icon="🕊️", layout="wide")
 
-# 사이드바 UI 설정
-with st.sidebar:
-    st.header("🎨 화면 테마 설정")
-    bg_opacity = st.slider("민주평통 로고 배경 선명도", min_value=0, max_value=100, value=25, step=5)
-
-opacity_val = bg_opacity / 100.0
-
-st.markdown(f"""
+st.markdown("""
 <style>
-    /* 1. 최하단 앱 전체 투명 배경 설정 */
-    .stApp {{
-        background-color: transparent !important;
-    }}
-
-    /* 2. 메인 컨테이너에 민주평통 로고 배경 배치 */
-    [data-testid="stMain"] {{
-        background-color: #FAFAFA !important;
-        background-image: url('data:image/svg+xml;base64,{PUAC_LOGO_SVG}') !important;
-        background-repeat: no-repeat !important;
-        background-position: center center !important;
-        background-size: min(70vw, 500px) auto !important;
-        background-attachment: fixed !important;
-        background-blend-mode: overlay;
-    }}
-    
-    /* 3. 배경 투명도 레이어 */
-    [data-testid="stMain"]::before {{
-        content: "";
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(250, 250, 250, {1.0 - opacity_val});
-        pointer-events: none;
-        z-index: 0;
-    }}
-
-    /* 4. 본문 컨테이너 z-index 보장 */
-    [data-testid="stMain"] > div {{
-        position: relative;
-        z-index: 1;
-    }}
-
-    /* 로고 타이틀 전용 스타일 */
-    .puac-title-box {{
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 10px;
-    }}
-    
-    .puac-logo-img {{
-        width: 48px;
-        height: 48px;
-    }}
+    /* 타이틀 강조 전용 스타일 */
+    .brand-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #1E293B;
+        margin-bottom: 0.2rem;
+    }
+    .brand-subtitle {
+        font-size: 1rem;
+        color: #64748B;
+        margin-bottom: 1.5rem;
+    }
 
     /* 채팅 스타일 */
-    .chat-container {{
+    .chat-container {
         display: flex;
         flex-direction: column;
         gap: 12px;
         padding: 10px;
-    }}
+    }
     
-    .message-wrapper {{
+    .message-wrapper {
         display: flex;
         flex-direction: column;
         max-width: 70%;
-    }}
+    }
     
-    .message-info {{
+    .message-info {
         font-size: 12px;
         color: #555;
         margin-bottom: 3px;
         display: flex;
         align-items: center;
         gap: 4px;
-    }}
+    }
     
-    .message-bubble {{
+    .message-bubble {
         padding: 10px 14px;
         border-radius: 15px;
         font-size: 14px;
         line-height: 1.4;
         word-break: break-word;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.06);
-    }}
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.04);
+    }
     
-    .other-user {{
+    .other-user {
         align-self: flex-start;
-    }}
-    .other-user .message-info {{
+    }
+    .other-user .message-info {
         text-align: left;
         justify-content: flex-start;
-    }}
-    .other-user .message-bubble {{
-        background-color: rgba(255, 238, 238, 0.93);
+    }
+    .other-user .message-bubble {
+        background-color: #FFF5F5;
         color: #611313;
         border-top-left-radius: 2px;
         border: 1px solid #FFD6D6;
-    }}
+    }
 
-    .my-user {{
+    .my-user {
         align-self: flex-end;
-    }}
-    .my-user .message-info {{
+    }
+    .my-user .message-info {
         text-align: right;
         justify-content: flex-end;
-    }}
-    .my-user .message-bubble {{
-        background-color: rgba(238, 245, 255, 0.93);
+    }
+    .my-user .message-bubble {
+        background-color: #F0F7FF;
         color: #0F2D59;
         border-top-right-radius: 2px;
         border: 1px solid #D6E8FF;
-    }}
+    }
     
-    /* 카드 반투명 처리 */
-    div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {{
-        background-color: rgba(255, 255, 255, 0.88) !important;
+    div[data-testid="stExpander"], div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 10px;
-    }}
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -320,18 +262,10 @@ if st.session_state.page_step == "profile":
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-        # 타이틀 상단에 민주평통 로고 및 IT-DA 브랜드 적용
-        st.markdown(
-            f'''
-            <div class="puac-title-box">
-                <img src="data:image/svg+xml;base64,{PUAC_LOGO_SVG}" class="puac-logo-img"/>
-                <h1 style="margin:0; padding:0;">민주평통 잇다 <span style="font-size:20px; color:#666;">(IT-DA)</span></h1>
-            </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="brand-title">🕊️ 민주평통 잇다 <span style="font-size:18px; color:#64748B;">(IT-DA)</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="brand-subtitle">남북 청년의 마음과 내일을 이어가는 소통 플랫폼</div>', unsafe_allow_html=True)
+        
         st.subheader("프로필을 선택하거나 생성해주세요")
-        st.caption("남북 청년의 마음과 내일을 이어가는 소통 플랫폼입니다.")
         st.divider()
 
         profile_options = [f"[{p['role'].split()[0]}] {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
@@ -421,15 +355,7 @@ elif st.session_state.page_step == "menu":
 
     with col2:
         flag_img = get_flag_badge(st.session_state.user_role)
-        st.markdown(
-            f'''
-            <div class="puac-title-box">
-                <img src="data:image/svg+xml;base64,{PUAC_LOGO_SVG}" class="puac-logo-img"/>
-                <h1 style="margin:0; padding:0;">민주평통 잇다 <span style="font-size:20px; color:#666;">(IT-DA)</span></h1>
-            </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="brand-title">🕊️ 민주평통 잇다 <span style="font-size:18px; color:#64748B;">(IT-DA)</span></div>', unsafe_allow_html=True)
         st.markdown(f"### 반갑습니다, {flag_img} **{st.session_state.user_nickname}**님!", unsafe_allow_html=True)
         st.write("원하시는 활동을 선택해주세요.")
         st.divider()
@@ -461,15 +387,7 @@ elif st.session_state.page_step == "main":
     
     flag_img = get_flag_badge(st.session_state.user_role)
     with nav_col1:
-        st.markdown(
-            f'''
-            <div class="puac-title-box">
-                <img src="data:image/svg+xml;base64,{PUAC_LOGO_SVG}" style="width:36px; height:36px;"/>
-                <h2 style="margin:0; padding:0;">민주평통 잇다 <span style="font-size:16px; color:#666;">(IT-DA)</span></h2>
-            </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+        st.markdown('<h3 style="margin:0; padding:0;">🕊️ 민주평통 잇다 <span style="font-size:14px; color:#64748B;">(IT-DA)</span></h3>', unsafe_allow_html=True)
         st.markdown(f"접속 프로필: {flag_img} **{st.session_state.user_nickname}** ({st.session_state.user_role})", unsafe_allow_html=True)
     
     with nav_col2:
