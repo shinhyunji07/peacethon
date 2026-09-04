@@ -49,7 +49,6 @@ def auto_translate_terms(text, viewer_role):
     # 1. 접속자가 '남한 청년' 프로필인 경우
     # -> 북한 단어를 남한어로 바꾸고 원래 적힌 북한 단어를 병기
     if "남한" in viewer_role:
-        # 긴 단어부터 정렬하여 치환 오류 방지
         sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[1]), reverse=True)
         for south_term, north_term in sorted_dict:
             if north_term in translated_text:
@@ -66,6 +65,20 @@ def auto_translate_terms(text, viewer_role):
                 translated_text = translated_text.replace(south_term, replacement)
 
     return translated_text
+
+def preview_opponent_translation(text, my_role):
+    """
+    내가 작성한 단어가 '상대방 국적' 사용자에게 어떻게 변환되어 보일지 안내하는 헬퍼 함수
+    """
+    if not text:
+        return ""
+    
+    opponent_role = "🇰🇵 북한 청년" if "남한" in my_role else "🇰🇷 남한 청년"
+    translated = auto_translate_terms(text, opponent_role)
+    
+    if translated != text:
+        return f"💡 **상대방 화면 표기 예시**: {translated}"
+    return ""
 
 # ==========================================
 # 1. 메모리 기반 초고속 글로벌 메시지 버퍼
@@ -265,7 +278,7 @@ def render_chat_messages():
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                # 접속자 국적 언어 기준 자동 치환 및 병기
+                # 접속자의 언어 국적 기준 자동 변환 및 원문 병기
                 display_content = auto_translate_terms(msg["content"], current_role)
                 
                 chat_html += (
@@ -317,11 +330,12 @@ def render_live_chat():
                 st.session_state.confirm_clear_mode = False
                 st.rerun()
     else:
-        st.info("💡 **통합 사전 실시간 반영**: 작성자 국적과 무관하게, 현재 로그인한 국적의 언어로 사전 단어가 표기되며 원문이 병기됩니다.")
+        opponent_label = "북한 청년" if "남한" in st.session_state.user_role else "남한 청년"
+        st.info(f"💡 **상호 단어 변환 안내**: 사전에 등록된 용어를 입력하면, 상대방({opponent_label})의 화면에는 해당 국적 언어로 자동 치환되어 전달됩니다.")
 
     render_chat_messages()
 
-    if prompt := st.chat_input("메시지를 입력하세요..."):
+    if prompt := st.chat_input("메시지를 입력하세요... (예: 아이스크림, 곽밥, 단불)"):
         new_msg = {
             "avatar": st.session_state.avatar_emoji,
             "author": st.session_state.user_nickname,
@@ -496,6 +510,12 @@ elif st.session_state.page_step == "main":
 
         with st.expander("✨ 새 피드 작성하기 (사진 첨부)", expanded=False):
             post_content = st.text_area("내용을 입력해주세요", height=90, key="post_content_input")
+            
+            # 작성 중 상대방에게 변환되어 보일 문구 실시간 미리보기
+            preview_msg = preview_opponent_translation(post_content, st.session_state.user_role)
+            if preview_msg:
+                st.caption(preview_msg)
+
             uploaded_img = st.file_uploader("사진을 올려보세요 (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
 
             if st.button("게시하기 🚀", type="primary"):
