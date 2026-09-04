@@ -62,6 +62,13 @@ def image_to_base64(uploaded_file):
         return f"data:{mime_type};base64,{base64_str}"
     return None
 
+# PC 호환 국기 SVG 태그 생성 함수
+def get_flag_badge(role):
+    if "남한" in role:
+        return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f7.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
+    else:
+        return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
+
 # ==========================================
 # 3. 페이지 설정 및 Custom CSS
 # ==========================================
@@ -83,9 +90,12 @@ st.markdown("""
     }
     
     .message-info {
-        font-size: 11px;
-        color: #666;
+        font-size: 12px;
+        color: #555;
         margin-bottom: 3px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
     }
     
     .message-bubble {
@@ -102,6 +112,7 @@ st.markdown("""
     }
     .other-user .message-info {
         text-align: left;
+        justify-content: flex-start;
     }
     .other-user .message-bubble {
         background-color: #FFECEC;
@@ -114,6 +125,7 @@ st.markdown("""
     }
     .my-user .message-info {
         text-align: right;
+        justify-content: flex-end;
     }
     .my-user .message-bubble {
         background-color: #E8F2FF;
@@ -143,7 +155,7 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 채팅 내역 전용 프래그먼트 (1초 자동 갱신)
+# 4. 실시간 채팅 내역 프래그먼트 (1초 자동 갱신)
 # ==========================================
 @st.fragment(run_every=1)
 def render_chat_messages():
@@ -157,9 +169,11 @@ def render_chat_messages():
             for msg in GLOBAL_CHAT_STORE:
                 is_me = (msg["author"] == current_user)
                 wrapper_class = "my-user" if is_me else "other-user"
+                flag_img = get_flag_badge(msg.get("role", ""))
+                
                 chat_html += (
                     f'<div class="message-wrapper {wrapper_class}">'
-                    f'<div class="message-info">{msg["avatar"]} <b>{msg["author"]}</b> ({msg["role"]})</div>'
+                    f'<div class="message-info">{flag_img} <b>{msg["author"]}</b> <span style="font-size:11px; color:#777;">({msg["role"]})</span></div>'
                     f'<div class="message-bubble">{msg["content"]}</div>'
                     f'</div>'
                 )
@@ -208,7 +222,7 @@ def render_live_chat():
     else:
         st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
 
-    # 실시간 메시지 표시 영역 (부분 갱신 적용)
+    # 실시간 메시지 영역
     render_chat_messages()
 
     # 메시지 입력창
@@ -236,7 +250,7 @@ if st.session_state.page_step == "profile":
         st.caption("남북 청년들의 자유로운 소통 공간에 오신 것을 환영합니다.")
         st.divider()
 
-        profile_options = [f"{p['avatar']} {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
+        profile_options = [f"[{p['role'].split()[0]}] {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
         
         if profile_options:
             st.markdown("### 👤 기존 프로필 접속")
@@ -322,8 +336,9 @@ elif st.session_state.page_step == "menu":
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
+        flag_img = get_flag_badge(st.session_state.user_role)
         st.title("🕊️ 통일 톡톡")
-        st.subheader(f"반갑습니다, {st.session_state.avatar_emoji} {st.session_state.user_nickname}님!")
+        st.markdown(f"### 반갑습니다, {flag_img} **{st.session_state.user_nickname}**님!", unsafe_allow_html=True)
         st.write("원하시는 활동을 선택해주세요.")
         st.divider()
 
@@ -352,9 +367,10 @@ elif st.session_state.page_step == "menu":
 elif st.session_state.page_step == "main":
     nav_col1, nav_col2, nav_col3 = st.columns([2, 1, 1])
     
+    flag_img = get_flag_badge(st.session_state.user_role)
     with nav_col1:
         st.title("🕊️ 통일 톡톡")
-        st.caption(f"접속 프로필: {st.session_state.avatar_emoji} **{st.session_state.user_nickname}** ({st.session_state.user_role})")
+        st.markdown(f"접속 프로필: {flag_img} **{st.session_state.user_nickname}** ({st.session_state.user_role})", unsafe_allow_html=True)
     
     with nav_col2:
         other_menu = "sns" if st.session_state.selected_menu == "chat" else "chat"
@@ -417,7 +433,8 @@ elif st.session_state.page_step == "main":
                 if "comments" not in post:
                     post["comments"] = []
 
-                st.markdown(f"#### {post['avatar']} **{post['author']}** <span style='font-size:12px; color:gray;'>({post['role']} · {post['time']})</span>", unsafe_allow_html=True)
+                post_flag = get_flag_badge(post.get("role", ""))
+                st.markdown(f"#### {post_flag} **{post['author']}** <span style='font-size:12px; color:gray;'>({post['role']} · {post['time']})</span>", unsafe_allow_html=True)
 
                 if post.get("image"):
                     st.image(post["image"], use_container_width=True)
@@ -442,7 +459,8 @@ elif st.session_state.page_step == "main":
 
                 with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
                     for c in post["comments"]:
-                        st.markdown(f"**{c['avatar']} {c['author']}**: {c['content']} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
+                        c_flag = get_flag_badge(c.get("role", st.session_state.user_role))
+                        st.markdown(f"**{c_flag} {c['author']}**: {c['content']} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
 
                     with st.form(key=f"comment_form_{post.get('id', idx)}"):
                         comment_text = st.text_input("댓글을 남겨보세요...", key=f"c_in_{post.get('id', idx)}")
@@ -452,6 +470,7 @@ elif st.session_state.page_step == "main":
                             new_comment = {
                                 "author": st.session_state.user_nickname,
                                 "avatar": st.session_state.avatar_emoji,
+                                "role": st.session_state.user_role,
                                 "content": comment_text.strip(),
                                 "time": datetime.now().strftime("%m/%d %H:%M")
                             }
