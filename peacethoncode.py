@@ -61,7 +61,27 @@ if "chat_messages" not in st.session_state:
 if "sns_posts" not in st.session_state:
     st.session_state.sns_posts = initial_data.get("sns_posts", [])
 
-# 대화방 초기화 확인 팝업 Dialog 함수 정의
+# ==========================================
+# 3. 삭제 확인 모달 팝업 Dialog 정의
+# ==========================================
+# (1) 프로필 삭제 확인 팝업
+@st.dialog("⚠️ 프로필 삭제")
+def confirm_delete_profile(profile_idx, profile_name):
+    st.write(f"정말로 **'{profile_name}'** 프로필을 삭제하시겠습니까?")
+    st.caption("이 작업은 되돌릴 수 없으며, 로컬 저장 파일에서도 함께 삭제됩니다.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("네, 삭제합니다", type="primary", use_container_width=True):
+            del st.session_state.profiles[profile_idx]
+            save_data()
+            st.success("프로필이 삭제되었습니다.")
+            st.rerun()
+    with col2:
+        if st.button("취소", use_container_width=True):
+            st.rerun()
+
+# (2) 대화방 초기화 확인 팝업
 @st.dialog("⚠️ 대화방 전체 초기화")
 def confirm_clear_chat():
     st.write("정말로 대화방의 모든 메시지를 삭제하시겠습니까?")
@@ -93,7 +113,7 @@ if st.session_state.page_step == "profile":
         # 기존 프로필 목록 가져오기
         profile_options = [f"{p['avatar']} {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
         
-        # 1. 기존 프로필 선택 섹션
+        # 1. 기존 프로필 선택 및 삭제 섹션
         if profile_options:
             st.markdown("### 👤 기존 프로필 선택")
             selected_profile_str = st.selectbox(
@@ -101,15 +121,21 @@ if st.session_state.page_step == "profile":
                 options=profile_options
             )
             
-            if st.button("선택한 프로필로 입장하기 ➡️", use_container_width=True, type="primary"):
-                selected_idx = profile_options.index(selected_profile_str)
-                selected_profile = st.session_state.profiles[selected_idx]
-                
-                st.session_state.user_nickname = selected_profile["nickname"]
-                st.session_state.user_role = selected_profile["role"]
-                st.session_state.avatar_emoji = selected_profile["avatar"]
-                st.session_state.page_step = "menu"
-                st.rerun()
+            selected_idx = profile_options.index(selected_profile_str)
+            selected_profile = st.session_state.profiles[selected_idx]
+
+            btn_col1, btn_col2 = st.columns([2, 1])
+            with btn_col1:
+                if st.button("선택한 프로필로 입장하기 ➡️", use_container_width=True, type="primary"):
+                    st.session_state.user_nickname = selected_profile["nickname"]
+                    st.session_state.user_role = selected_profile["role"]
+                    st.session_state.avatar_emoji = selected_profile["avatar"]
+                    st.session_state.page_step = "menu"
+                    st.rerun()
+
+            with btn_col2:
+                if st.button("🗑️ 프로필 삭제", use_container_width=True):
+                    confirm_delete_profile(selected_idx, selected_profile_str)
                 
             st.markdown("<br>", unsafe_allow_html=True)
             st.divider()
@@ -213,7 +239,6 @@ elif st.session_state.page_step == "main":
             
         with chat_header_col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            # 채팅 메시지가 있을 때만 초기화 버튼 표시
             if st.session_state.chat_messages:
                 if st.button("🗑️ 대화방 초기화", use_container_width=True):
                     confirm_clear_chat()
