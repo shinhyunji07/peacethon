@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import os
 import base64
-import time
 from datetime import datetime
 
 # 데이터 저장 파일 경로 설정
@@ -144,17 +143,41 @@ if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
 # ==========================================
-# 4. 실시간 카카오톡 스타일 채팅 함수
+# 4. 실시간 채팅 내역 전용 프래그먼트 (1초 자동 갱신)
+# ==========================================
+@st.fragment(run_every=1)
+def render_chat_messages():
+    chat_box = st.container(height=420)
+    with chat_box:
+        if not GLOBAL_CHAT_STORE:
+            st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
+        else:
+            current_user = st.session_state.user_nickname
+            chat_html = '<div class="chat-container">'
+            for msg in GLOBAL_CHAT_STORE:
+                is_me = (msg["author"] == current_user)
+                wrapper_class = "my-user" if is_me else "other-user"
+                chat_html += (
+                    f'<div class="message-wrapper {wrapper_class}">'
+                    f'<div class="message-info">{msg["avatar"]} <b>{msg["author"]}</b> ({msg["role"]})</div>'
+                    f'<div class="message-bubble">{msg["content"]}</div>'
+                    f'</div>'
+                )
+            chat_html += '</div>'
+            st.markdown(chat_html, unsafe_allow_html=True)
+
+# ==========================================
+# 5. 메인 채팅 레이아웃 함수
 # ==========================================
 def render_live_chat():
     c_col1, c_col2, c_col3, c_col4 = st.columns([2, 1, 1, 1])
     
     with c_col1:
         st.subheader("💬 실시간 소통 채팅방")
-        st.caption("⚡ 메시지 작성 후 Enter를 누르면 상대방에게 즉시 전달됩니다.")
+        st.caption("⚡ 전체 화면 깜빡임 없이 1초마다 실시간 대화가 동기화됩니다.")
         
     with c_col2:
-        if st.button("🔄 실시간 동기화", use_container_width=True):
+        if st.button("🔄 수동 동기화", use_container_width=True):
             st.rerun()
 
     with c_col3:
@@ -185,27 +208,10 @@ def render_live_chat():
     else:
         st.info("서로를 존중하는 따뜻한 대화를 나누어 보세요.")
 
-    # 채팅 메시지 렌더링
-    chat_box = st.container(height=420)
-    with chat_box:
-        if not GLOBAL_CHAT_STORE:
-            st.caption("아직 대화 내역이 없습니다. 메시지를 입력해보세요!")
-        else:
-            current_user = st.session_state.user_nickname
-            chat_html = '<div class="chat-container">'
-            for msg in GLOBAL_CHAT_STORE:
-                is_me = (msg["author"] == current_user)
-                wrapper_class = "my-user" if is_me else "other-user"
-                chat_html += (
-                    f'<div class="message-wrapper {wrapper_class}">'
-                    f'<div class="message-info">{msg["avatar"]} <b>{msg["author"]}</b> ({msg["role"]})</div>'
-                    f'<div class="message-bubble">{msg["content"]}</div>'
-                    f'</div>'
-                )
-            chat_html += '</div>'
-            st.markdown(chat_html, unsafe_allow_html=True)
+    # 실시간 메시지 표시 영역 (부분 갱신 적용)
+    render_chat_messages()
 
-    # 입력 폼
+    # 메시지 입력창
     if prompt := st.chat_input("메시지를 입력하세요..."):
         new_msg = {
             "avatar": st.session_state.avatar_emoji,
@@ -217,23 +223,240 @@ def render_live_chat():
         save_data()
         st.rerun()
 
-    # 경량화된 실시간 갱신 트리거 (타이핑 방해 최소화)
-    st.components.v1.html(
-        """
-        <script>
-            setTimeout(function() {
-                const active = window.parent.document.activeElement;
-                const isTyping = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT');
-                if (!isTyping) {
-                    window.parent.postMessage({type: 'streamlit:rerun'}, '*');
-                }
-            }, 1500);
-        </script>
-        """,
-        height=0
-    )
-
 # ==========================================
 # STEP 1: 프로필 선택 및 생성 화면
 # ==========================================
-if st.session
+if st.session_state.page_step == "profile":
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        st.title("🕊️ 통일 톡톡")
+        st.subheader("프로필을 선택하거나 생성해주세요")
+        st.caption("남북 청년들의 자유로운 소통 공간에 오신 것을 환영합니다.")
+        st.divider()
+
+        profile_options = [f"{p['avatar']} {p['nickname']} ({p['role']})" for p in st.session_state.profiles]
+        
+        if profile_options:
+            st.markdown("### 👤 기존 프로필 접속")
+            selected_profile_str = st.selectbox(
+                "이미 생성된 프로필 중 선택하세요", 
+                options=profile_options
+            )
+            
+            selected_idx = profile_options.index(selected_profile_str)
+            selected_profile = st.session_state.profiles[selected_idx]
+
+            login_pw_input = st.text_input("비밀번호를 입력하세요", type="password", key="login_pw")
+
+            btn_col1, btn_col2 = st.columns([2, 1])
+            with btn_col1:
+                if st.button("선택한 프로필로 입장하기 ➡️", use_container_width=True, type="primary"):
+                    saved_pw = selected_profile.get("password", "")
+                    if saved_pw and login_pw_input != saved_pw:
+                        st.error("비밀번호가 올바르지 않습니다.")
+                    else:
+                        st.session_state.user_nickname = selected_profile["nickname"]
+                        st.session_state.user_role = selected_profile["role"]
+                        st.session_state.avatar_emoji = selected_profile["avatar"]
+                        st.session_state.page_step = "menu"
+                        st.rerun()
+
+            with btn_col2:
+                if st.button("🗑️ 프로필 삭제", use_container_width=True):
+                    saved_pw = selected_profile.get("password", "")
+                    if saved_pw and login_pw_input != saved_pw:
+                        st.error("비밀번호가 올바르지 않아 삭제할 수 없습니다.")
+                    else:
+                        del st.session_state.profiles[selected_idx]
+                        save_data()
+                        st.success("프로필이 삭제되었습니다.")
+                        st.rerun()
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.divider()
+
+        st.markdown("### ✨ 새 프로필 생성")
+        nickname_input = st.text_input("새로 사용할 닉네임을 입력하세요", value="", key="new_nickname")
+        password_input = st.text_input("비밀번호를 설정하세요", type="password", key="new_pw")
+        role_input = st.radio("소속을 선택해주세요", ["🇰🇷 남한 청년", "🇰🇵 북한 청년"], index=0)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("새 프로필로 생성 및 입장 ➡️", use_container_width=True):
+            clean_nickname = nickname_input.strip()
+            clean_pw = password_input.strip()
+            
+            if not clean_nickname:
+                st.warning("닉네임을 입력해 주세요!")
+            elif not clean_pw:
+                st.warning("비밀번호를 입력해 주세요!")
+            else:
+                existing_nicknames = [p["nickname"].lower() for p in st.session_state.profiles]
+                
+                if clean_nickname.lower() in existing_nicknames:
+                    st.error(f"이미 존재하는 닉네임('{clean_nickname}')입니다. 다른 닉네임을 사용해 주세요.")
+                else:
+                    avatar = "🇰🇷" if "남한" in role_input else "🇰🇵"
+                    new_profile = {
+                        "nickname": clean_nickname,
+                        "password": clean_pw,
+                        "role": role_input,
+                        "avatar": avatar
+                    }
+                    
+                    st.session_state.profiles.append(new_profile)
+                    save_data()
+                    
+                    st.session_state.user_nickname = clean_nickname
+                    st.session_state.user_role = role_input
+                    st.session_state.avatar_emoji = avatar
+                    st.session_state.page_step = "menu"
+                    st.rerun()
+
+# ==========================================
+# STEP 2: 메뉴 선택 화면
+# ==========================================
+elif st.session_state.page_step == "menu":
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        st.title("🕊️ 통일 톡톡")
+        st.subheader(f"반갑습니다, {st.session_state.avatar_emoji} {st.session_state.user_nickname}님!")
+        st.write("원하시는 활동을 선택해주세요.")
+        st.divider()
+
+        btn_col1, btn_col2 = st.columns(2)
+
+        with btn_col1:
+            if st.button("💬 실시간 채팅방\n\n자유로운 실시간 대화 나누기", use_container_width=True, type="primary"):
+                st.session_state.selected_menu = "chat"
+                st.session_state.page_step = "main"
+                st.rerun()
+
+        with btn_col2:
+            if st.button("📸 인스타 스타일 SNS\n\n사진 및 일상 공유하기", use_container_width=True):
+                st.session_state.selected_menu = "sns"
+                st.session_state.page_step = "main"
+                st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("⬅️ 뒤로가기 (프로필 변경)", use_container_width=True):
+            st.session_state.page_step = "profile"
+            st.rerun()
+
+# ==========================================
+# STEP 3: 메인 화면 (채팅 or SNS 선택)
+# ==========================================
+elif st.session_state.page_step == "main":
+    nav_col1, nav_col2, nav_col3 = st.columns([2, 1, 1])
+    
+    with nav_col1:
+        st.title("🕊️ 통일 톡톡")
+        st.caption(f"접속 프로필: {st.session_state.avatar_emoji} **{st.session_state.user_nickname}** ({st.session_state.user_role})")
+    
+    with nav_col2:
+        other_menu = "sns" if st.session_state.selected_menu == "chat" else "chat"
+        other_menu_label = "📸 SNS 피드로" if st.session_state.selected_menu == "chat" else "💬 실시간 채팅으로"
+        if st.button(f"🔄 {other_menu_label}", use_container_width=True):
+            st.session_state.selected_menu = other_menu
+            st.rerun()
+
+    with nav_col3:
+        if st.button("⬅️ 뒤로가기 (메뉴 선택)", use_container_width=True):
+            st.session_state.page_step = "menu"
+            st.rerun()
+
+    st.divider()
+
+    # 1. 채팅창 화면
+    if st.session_state.selected_menu == "chat":
+        render_live_chat()
+
+    # 2. SNS 피드 화면
+    elif st.session_state.selected_menu == "sns":
+        st.subheader("📸 일상 피드 (SNS)")
+
+        with st.expander("✨ 새 피드 작성하기 (사진 첨부)", expanded=False):
+            post_content = st.text_area("내용을 입력해주세요", height=90, key="post_content_input")
+            uploaded_img = st.file_uploader("사진을 올려보세요 (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
+
+            if st.button("게시하기 🚀", type="primary"):
+                if post_content.strip() or uploaded_img is not None:
+                    img_b64 = image_to_base64(uploaded_img)
+                    new_post = {
+                        "id": int(datetime.now().timestamp() * 1000),
+                        "author": st.session_state.user_nickname,
+                        "role": st.session_state.user_role,
+                        "avatar": st.session_state.avatar_emoji,
+                        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "content": post_content,
+                        "image": img_b64,
+                        "likes": [],
+                        "comments": []
+                    }
+                    st.session_state.sns_posts.insert(0, new_post)
+                    save_data()
+                    st.success("피드가 등록되었습니다!")
+                    st.rerun()
+                else:
+                    st.warning("내용이나 사진 중 하나는 작성해 주세요.")
+
+        latest_data = load_data()
+        st.session_state.sns_posts = latest_data.get("sns_posts", [])
+
+        if not st.session_state.sns_posts:
+            st.info("아직 등록된 피드가 없습니다. 첫 사진의 주인공이 되어보세요!")
+        else:
+            current_user = st.session_state.user_nickname
+
+            for idx, post in enumerate(st.session_state.sns_posts):
+                if "likes" not in post:
+                    post["likes"] = []
+                if "comments" not in post:
+                    post["comments"] = []
+
+                st.markdown(f"#### {post['avatar']} **{post['author']}** <span style='font-size:12px; color:gray;'>({post['role']} · {post['time']})</span>", unsafe_allow_html=True)
+
+                if post.get("image"):
+                    st.image(post["image"], use_container_width=True)
+
+                if post.get("content"):
+                    st.write(post["content"])
+
+                like_count = len(post["likes"])
+                has_liked = current_user in post["likes"]
+
+                col_like, col_comment_count = st.columns([1, 4])
+                
+                with col_like:
+                    like_btn_label = f"❤️ {like_count}" if has_liked else f"🤍 {like_count}"
+                    if st.button(like_btn_label, key=f"like_{post.get('id', idx)}"):
+                        if has_liked:
+                            post["likes"].remove(current_user)
+                        else:
+                            post["likes"].append(current_user)
+                        save_data()
+                        st.rerun()
+
+                with st.expander(f"💬 댓글 {len(post['comments'])}개 보기 / 달기"):
+                    for c in post["comments"]:
+                        st.markdown(f"**{c['avatar']} {c['author']}**: {c['content']} <span style='font-size:10px; color:gray;'>({c['time']})</span>", unsafe_allow_html=True)
+
+                    with st.form(key=f"comment_form_{post.get('id', idx)}"):
+                        comment_text = st.text_input("댓글을 남겨보세요...", key=f"c_in_{post.get('id', idx)}")
+                        c_submit = st.form_submit_button("댓글 작성")
+                        
+                        if c_submit and comment_text.strip():
+                            new_comment = {
+                                "author": st.session_state.user_nickname,
+                                "avatar": st.session_state.avatar_emoji,
+                                "content": comment_text.strip(),
+                                "time": datetime.now().strftime("%m/%d %H:%M")
+                            }
+                            post["comments"].append(new_comment)
+                            save_data()
+                            st.rerun()
+
+                st.markdown("---")
