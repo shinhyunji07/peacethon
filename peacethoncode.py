@@ -263,7 +263,7 @@ if st.session_state.page_step == "profile":
 
     with col2:
         st.markdown('<div class="brand-title">🕊️ PUAC IT-DA(잇다)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="brand-subtitle">남북 청년의 마음과 내일을 이어가는 소통 플랫폼</div>', unsafe_allow_html=True)
+        st.markdown('<div class="brand-subtitle">디지털로 경계의 벽을 허무다 </div>', unsafe_allow_html=True)
         
         st.subheader("프로필을 선택하거나 생성해주세요")
         st.divider()
