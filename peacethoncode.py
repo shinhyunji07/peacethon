@@ -4,7 +4,46 @@ import os
 import base64
 from datetime import datetime
 
+# ==========================================
+# 🔒 [긴급 접근 차단 시스템]
+# 관리자 비밀번호 설정 (원하는 비밀번호로 변경하세요)
+# ==========================================
+ADMIN_PASSWORD = "admin1234"
+
+st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
+
+# 세션 상태 초기화
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+# 비밀번호 미인증 시 접근 차단 화면 출력
+if not st.session_state.authenticated:
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.error("🔒 **사이트 접근이 제한되었습니다.**")
+        st.write("현재 점검 중이거나 접근이 차단된 상태입니다. 관리자 비밀번호를 입력해주세요.")
+        
+        input_password = st.text_input("관리자 비밀번호", type="password", key="admin_lock_input")
+        
+        if st.button("접근 승인 🔓", type="primary", use_container_width=True):
+            if input_password == ADMIN_PASSWORD:
+                st.session_state.authenticated = True
+                st.success("인증되었습니다.")
+                st.rerun()
+            else:
+                st.error("비밀번호가 올바르지 않습니다.")
+        
+        st.caption("※ 서비스 보안 및 권리 보호를 위해 일시적으로 잠금 처리되었습니다.")
+    
+    # 비밀번호를 맞추기 전까지 아래의 모든 서비스 로직 실행을 중단합니다.
+    st.stop()
+
+
+# ==========================================
 # 데이터 저장 파일 경로 설정
+# ==========================================
 DATA_FILE = "tongil_talk_data.json"
 
 # ==========================================
@@ -56,7 +95,7 @@ def auto_translate_terms(text, viewer_role, author_role):
                 if north_term in translated_text:
                     replacement = f"<b>{south_term}</b><span style='color:#0055FF; font-size:0.85em;'>(←{north_term})</span>"
                     translated_text = translated_text.replace(north_term, replacement)
-        else: # 내가(남한 유저) 작성한 글을 내 화면에서 볼 때 (상대방에게 변환될 단어 표시)
+        else: # 내가(남한 유저) 작성한 글을 내 화면에서 볼 때
             sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[0]), reverse=True)
             for south_term, north_term in sorted_dict:
                 if south_term in translated_text:
@@ -71,7 +110,7 @@ def auto_translate_terms(text, viewer_role, author_role):
                 if south_term in translated_text:
                     replacement = f"<b>{north_term}</b><span style='color:#D90000; font-size:0.85em;'>(←{south_term})</span>"
                     translated_text = translated_text.replace(south_term, replacement)
-        else: # 내가(북한 유저) 작성한 글을 내 화면에서 볼 때 (상대방에게 변환될 단어 표시)
+        else: # 내가(북한 유저) 작성한 글을 내 화면에서 볼 때
             sorted_dict = sorted(INTEGRATED_DICTIONARY, key=lambda x: len(x[1]), reverse=True)
             for south_term, north_term in sorted_dict:
                 if north_term in translated_text:
@@ -142,10 +181,8 @@ def get_flag_badge(role):
         return '<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1f0-1f1f5.svg" style="width:16px; height:16px; vertical-align:-2px; margin-right:3px;">'
 
 # ==========================================
-# 4. 페이지 기본 설정 및 스타일 반영
+# 4. 페이지 기본 스타일 및 사이드바 설정
 # ==========================================
-st.set_page_config(page_title="PUAC IT-DA(잇다)", page_icon="🕊️", layout="wide")
-
 st.sidebar.title("🎨 테마 설정")
 bg_opacity = st.sidebar.slider("배경색 채도/농도 조절 (%)", min_value=10, max_value=100, value=80, step=5) / 100.0
 
@@ -260,6 +297,11 @@ if "sns_posts" not in st.session_state:
 if "confirm_clear_mode" not in st.session_state:
     st.session_state.confirm_clear_mode = False
 
+# 사이드바 잠금 상태 해제 버튼
+if st.sidebar.button("🔒 다시 잠그기"):
+    st.session_state.authenticated = False
+    st.rerun()
+
 # ==========================================
 # 5. 실시간 채팅 내역 프래그먼트
 # ==========================================
@@ -278,7 +320,6 @@ def render_chat_messages():
                 wrapper_class = "my-user" if is_me else "other-user"
                 flag_img = get_flag_badge(msg.get("role", ""))
                 
-                # 작성자와 관람자의 관계에 맞는 변환어 표기 적용
                 display_content = auto_translate_terms(
                     text=msg["content"], 
                     viewer_role=current_role, 
